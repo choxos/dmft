@@ -8,3 +8,4 @@
 ^\.github$
 ^codecov\.yml$
 ^\.lintr$
+^Rplots\.pdf$

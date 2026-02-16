@@ -26,12 +26,23 @@ pak::pak("choxos/dmft")
 remotes::install_github("choxos/dmft")
 ```
 
+### Optional backends
+
 The INLA backend (default) requires the INLA package:
 
 ``` r
 install.packages("INLA",
   repos = c(CRAN = "https://cloud.r-project.org",
             INLA = "https://inla.r-inla-download.org/R/stable"))
+```
+
+The Stan backend requires cmdstanr:
+
+``` r
+install.packages("cmdstanr",
+  repos = c("https://stan-dev.r-universe.dev",
+            "https://cloud.r-project.org"))
+cmdstanr::install_cmdstan()
 ```
 
 ## Quick Start
