@@ -1,0 +1,53 @@
+url: https://choxos.github.io/dmft/
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: Configuration
+    desc: Set up your analysis
+    contents:
+      - dmft_config
+
+  - title: Data Pipeline
+    desc: Load, clean, and prepare data
+    contents:
+      - dmft_load
+      - dmft_load_shapefile
+      - dmft_clean
+      - impute_uncertainty
+
+  - title: Spatial Structure
+    desc: Build adjacency for spatial modeling
+    contents:
+      - dmft_adjacency
+
+  - title: Model Fitting
+    desc: Bayesian hierarchical models
+    contents:
+      - dmft_fit
+      - dmft_predict
+      - dmft_diagnose
+
+  - title: Projections
+    desc: Future trend scenarios
+    contents:
+      - dmft_project
+
+  - title: Visualization
+    desc: Maps and trend plots
+    contents:
+      - dmft_plot_map
+      - dmft_plot_trends
+      - theme_dmft
+
+  - title: Pipeline
+    desc: Full analysis workflow
+    contents:
+      - dmft_run
+      - dmft_phantom
+
+  - title: Utilities
+    desc: Helper functions
+    contents:
+      - compute_bym2_scaling_factor
