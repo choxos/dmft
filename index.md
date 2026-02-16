@@ -4,6 +4,8 @@
 estimating and projecting dental caries burden (DMFT/dmft indices) at
 subnational level for any country.
 
+**Documentation**: <https://choxos.github.io/dmft/>
+
 ## Features
 
 - **Bayesian spatial-temporal-age modeling** with BYM2 spatial effects,
