@@ -3,9 +3,12 @@
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/choxos/dmft/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/choxos/dmft/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![pkgdown](https://github.com/choxos/dmft/actions/workflows/pkgdown.yaml/badge.svg)](https://choxos.github.io/dmft/)
 <!-- badges: end -->
 
 **dmft** implements GBD-style Bayesian hierarchical models for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level for any country.
+
+**Documentation**: <https://choxos.github.io/dmft/>
 
 ## Features
 

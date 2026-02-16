@@ -38,8 +38,8 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
+          packages: local::.
           extra-packages: any::rcmdcheck, any::testthat, any::withr
-          needs: check
           dependencies: '"hard"'
 
       - uses: r-lib/actions/check-r-package@v2
