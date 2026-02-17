@@ -43,6 +43,7 @@ Suggests:
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+Additional_repositories: https://stan-dev.r-universe.dev
 Config/testthat/edition: 3
 Config/Needs/website: pkgdown
 URL: https://github.com/choxos/dmft
