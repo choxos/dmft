@@ -37,13 +37,11 @@ Suggests:
     testthat (>= 3.0.0),
     withr,
     merTools,
-    cmdstanr,
     posterior,
     loo,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
-Additional_repositories: https://stan-dev.r-universe.dev
 Config/testthat/edition: 3
 Config/Needs/website: pkgdown, knitr, rmarkdown
 URL: https://github.com/choxos/dmft
