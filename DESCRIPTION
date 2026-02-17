@@ -45,6 +45,6 @@ Suggests:
 VignetteBuilder: knitr
 Additional_repositories: https://stan-dev.r-universe.dev
 Config/testthat/edition: 3
-Config/Needs/website: pkgdown
+Config/Needs/website: pkgdown, knitr, rmarkdown
 URL: https://github.com/choxos/dmft
 BugReports: https://github.com/choxos/dmft/issues
