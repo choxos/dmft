@@ -2,17 +2,19 @@
 % Please edit documentation in R/model_predict.R
 \name{dmft_predict}
 \alias{dmft_predict}
-\title{Generate predictions from a fitted DMFT model}
+\title{Generate predictions from a fitted DMFT model with AST smoothing}
 \usage{
-dmft_predict(fit, config, n_posterior = 100L)
+dmft_predict(fit, adjacency, config, n_boot = NULL)
 }
 \arguments{
 \item{fit}{A fitted model from \code{\link[=dmft_fit]{dmft_fit()}}.}
 
+\item{adjacency}{Adjacency object from \code{\link[=dmft_adjacency]{dmft_adjacency()}}.}
+
 \item{config}{A \link{dmft_config} object.}
 
-\item{n_posterior}{Number of posterior samples for uncertainty.
-Set to 0 to use the delta method.}
+\item{n_boot}{Number of bootstrap replicates for uncertainty.
+Set to 0 to skip uncertainty estimation.}
 }
 \value{
 A tibble with columns: \code{region}, \code{year}, \code{age_group},
@@ -20,6 +22,6 @@ A tibble with columns: \code{region}, \code{year}, \code{age_group},
 }
 \description{
 Produces predictions for all region-year-age combinations in the
-historical period. Uses posterior sampling when available, falling
-back to a delta-method approximation.
+historical period. Uses AST (Age-Spatial-Temporal) kernel smoothing
+on mixed-model residuals, with bootstrap uncertainty intervals.
 }

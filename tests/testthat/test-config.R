@@ -10,8 +10,8 @@ test_that("dmft_config creates valid config object", {
   expect_equal(cfg$year_start, 2000L)
   expect_equal(cfg$year_end, 2020L)
   expect_equal(cfg$n_years, 21L)
-  expect_equal(cfg$backend, "inla")
   expect_equal(length(cfg$historical_years), 21)
+  expect_equal(cfg$ast_params$par_space, 0.9)
 })
 
 test_that("dmft_config validates inputs", {

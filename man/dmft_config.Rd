@@ -15,13 +15,11 @@ dmft_config(
   dmft_max_deciduous = 20L,
   dmft_max_permanent = 28L,
   cv_default = 0.3,
-  backend = c("inla", "cmdstanr"),
+  covariates = NULL,
+  ast_params = list(par_space = 0.9, par_time = 2, par_age = 1, weight_coverage = 0.9),
+  n_boot = 1000L,
   seed = 12345L,
-  n_draws = 250L,
-  n_cores = max(1L, parallel::detectCores() - 1L),
-  region_mapping = NULL,
-  stan_settings = list(chains = 4, parallel_chains = 4, iter_warmup = 1000, iter_sampling
-    = 1000, adapt_delta = 0.95, max_treedepth = 12)
+  region_mapping = NULL
 )
 }
 \arguments{
@@ -44,26 +42,30 @@ If \code{NULL}, no projections are configured.}
 
 \item{cv_default}{Default coefficient of variation for uncertainty imputation.}
 
-\item{backend}{Inference backend: \code{"inla"} or \code{"cmdstanr"}.}
+\item{covariates}{Character vector of covariate column names to include as
+fixed effects in the mixed model. If \code{NULL}, only the intercept is used.}
+
+\item{ast_params}{Named list of AST smoothing parameters:
+\describe{
+\item{par_space}{Spatial correlation parameter (default 0.9).}
+\item{par_time}{Temporal smoothing parameter, lambda (default 2).}
+\item{par_age}{Age smoothing parameter, omega (default 1).}
+\item{weight_coverage}{Weight for high-coverage data sources (default 0.9).}
+}}
+
+\item{n_boot}{Number of bootstrap replicates for uncertainty intervals.}
 
 \item{seed}{Random seed for reproducibility.}
 
-\item{n_draws}{Number of posterior draws.}
-
-\item{n_cores}{Number of CPU cores.}
-
 \item{region_mapping}{Optional named list mapping alternative region names to
 canonical names in \code{regions}.}
-
-\item{stan_settings}{Named list of Stan MCMC settings. Only used when
-\code{backend = "cmdstanr"}.}
 }
 \value{
 An object of class \code{"dmft_config"}.
 }
 \description{
 Defines all parameters for a DMFT/dmft analysis: regions, time period,
-age groups, model priors, and projection settings.
+age groups, AST smoothing parameters, and projection settings.
 }
 \examples{
 cfg <- dmft_config(

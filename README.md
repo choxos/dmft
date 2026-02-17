@@ -6,15 +6,17 @@
 [![pkgdown](https://github.com/choxos/dmft/actions/workflows/pkgdown.yaml/badge.svg)](https://choxos.github.io/dmft/)
 <!-- badges: end -->
 
-**dmft** implements GBD-style Bayesian hierarchical models for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level for any country.
+**dmft** implements the Age-Spatial-Temporal (AST) model for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level for any country.
 
 **Documentation**: <https://choxos.github.io/dmft/>
 
 ## Features
 
-- **Bayesian spatial-temporal-age modeling** with BYM2 spatial effects, RW2 temporal trends, and RW1 age effects
-- **Two inference backends**: INLA (fast approximate Bayesian) and Stan (full MCMC via cmdstanr)
-- **Gaussian meta-regression** with inverse-variance weighting for study-level summary data
+- **Two-stage AST modeling**: mixed-effects model (lme4) + kernel-smoothed residuals across age, space, and time
+- **Spatial smoothing** via adjacency-based weight matrices from shapefiles
+- **Temporal smoothing** using LOESS-inspired cubic power weights
+- **Age smoothing** with exponential decay kernels
+- **Bootstrap uncertainty** via multilevel model resampling
 - **Projection framework** with reference, optimistic, and pessimistic scenarios
 - **Publication-ready visualizations**: choropleth maps, temporal trends, uncertainty ribbons
 - **Country-agnostic**: works with any shapefile and study-level data
@@ -27,25 +29,6 @@ pak::pak("choxos/dmft")
 
 # Or with remotes
 remotes::install_github("choxos/dmft")
-```
-
-### Optional backends
-
-The INLA backend (default) requires the INLA package:
-
-``` r
-install.packages("INLA",
-  repos = c(CRAN = "https://cloud.r-project.org",
-            INLA = "https://inla.r-inla-download.org/R/stable"))
-```
-
-The Stan backend requires cmdstanr:
-
-``` r
-install.packages("cmdstanr",
-  repos = c("https://stan-dev.r-universe.dev",
-            "https://cloud.r-project.org"))
-cmdstanr::install_cmdstan()
 ```
 
 ## Quick Start
@@ -83,11 +66,13 @@ clean <- dmft_clean(raw, config = cfg)
 # Create spatial structure
 adj <- dmft_adjacency(shapefile_path = "regions.shp", config = cfg)
 
-# Fit model
+# Fit mixed-effects model
 fit <- dmft_fit(clean$permanent, adj, dentition = "permanent", config = cfg)
 
-# Predict and diagnose
-estimates <- dmft_predict(fit, config = cfg)
+# AST smoothing + bootstrap uncertainty
+estimates <- dmft_predict(fit, adj, config = cfg)
+
+# Diagnostics
 diagnostics <- dmft_diagnose(fit, config = cfg)
 
 # Project future trends
@@ -110,18 +95,28 @@ The input CSV/XLSX should contain study-level summary statistics with at minimum
 
 ## Model
 
-The package fits a Bayesian hierarchical model:
+The package uses a two-stage AST (Age-Spatial-Temporal) approach:
+
+**Stage 1 --- Mixed-effects model (lme4)**
 
 ```
-y_i ~ Normal(mu_i, se_i^2)    [Gaussian meta-regression]
+y_i ~ Normal(mu_i, se_i^2)
 
-mu_i = beta_0 + S_region + T_year + A_age + G_sex + interactions
+mu_i = beta_0 + [covariates] + b_region + b_year
 
-S ~ BYM2(rho, sigma_spatial)   [spatial: ICAR + IID mixture]
-T ~ RW2(sigma_temporal)        [temporal: second-order random walk]
-A ~ RW1(sigma_age)             [age: first-order random walk]
-G ~ IID(sigma_sex)             [sex: exchangeable]
+b_region ~ Normal(0, sigma_region^2)   [random intercepts]
+b_year   ~ Normal(0, sigma_year^2)     [random intercepts]
 ```
+
+**Stage 2 --- AST kernel smoothing of residuals**
+
+Residuals from Stage 1 are smoothed using weighted averaging across three dimensions:
+
+- **Spatial**: adjacency-based weights (par_space = 0.9)
+- **Temporal**: LOESS cubic power decay (par_time = 2)
+- **Age**: exponential decay (par_age = 1)
+
+The combined weight matrix is the Kronecker product of these three weight matrices, row-normalized to sum to 1.
 
 ## License
 

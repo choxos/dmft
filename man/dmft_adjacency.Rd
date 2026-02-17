@@ -29,12 +29,11 @@ A list with elements:
 \item{adj_matrix}{Binary adjacency matrix (n x n).}
 \item{nb}{\code{spdep} neighbourhood object.}
 \item{sf}{The \code{sf} object (reordered to match config).}
-\item{graph_path}{Path to the INLA graph file (temp file).}
-\item{node1, node2}{Edge list for Stan / BYM2 scaling.}
+\item{location_ids}{Named integer vector mapping region names to numeric IDs.}
 }
 }
 \description{
-Builds the neighbourhood graph needed for BYM2 spatial random effects.
+Builds the neighbourhood graph needed for the AST spatial weighting.
 Uses Queen contiguity (shared boundary or vertex). Isolated regions
 (islands) are connected to their nearest neighbour.
 }

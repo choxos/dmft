@@ -1,8 +1,8 @@
 #' Run the full DMFT analysis pipeline
 #'
 #' Orchestrates the complete workflow: data loading, cleaning, spatial
-#' structure, model fitting, prediction, diagnostics, and optional
-#' projections.
+#' structure, mixed-effects model fitting, AST smoothing, bootstrap
+#' uncertainty, diagnostics, and optional projections.
 #'
 #' @param data_path Path to study-level CSV/XLSX data.
 #' @param shapefile_path Path to regional shapefile.
@@ -36,7 +36,7 @@ dmft_run <- function(data_path,
   dentition <- match.arg(dentition)
   stopifnot(inherits(config, "dmft_config"))
 
-  cli_alert_info("Starting DMFT analysis pipeline")
+  cli_alert_info("Starting DMFT analysis pipeline (AST method)")
 
   # 1. Load data
   raw_data <- dmft_load(data_path, config)
@@ -61,7 +61,7 @@ dmft_run <- function(data_path,
     projections = list()
   )
 
-  # 4. Model fitting + predictions
+  # 4. Model fitting + AST smoothing + predictions
   dents <- switch(dentition,
     both      = c("deciduous", "permanent"),
     deciduous = "deciduous",
@@ -75,8 +75,13 @@ dmft_run <- function(data_path,
       next
     }
 
+    # Stage 1: Fit mixed-effects model
     fit <- dmft_fit(d, adj, dentition = dent, config = config)
-    est <- dmft_predict(fit, config)
+
+    # Stage 2: AST smoothing + bootstrap uncertainty
+    est <- dmft_predict(fit, adj, config)
+
+    # Diagnostics
     diag <- dmft_diagnose(fit, config)
 
     results$fits[[dent]]       <- fit

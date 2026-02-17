@@ -1,6 +1,6 @@
 #' Create spatial adjacency structure from a shapefile
 #'
-#' Builds the neighbourhood graph needed for BYM2 spatial random effects.
+#' Builds the neighbourhood graph needed for the AST spatial weighting.
 #' Uses Queen contiguity (shared boundary or vertex). Isolated regions
 #' (islands) are connected to their nearest neighbour.
 #'
@@ -17,8 +17,7 @@
 #'     \item{adj_matrix}{Binary adjacency matrix (n x n).}
 #'     \item{nb}{`spdep` neighbourhood object.}
 #'     \item{sf}{The `sf` object (reordered to match config).}
-#'     \item{graph_path}{Path to the INLA graph file (temp file).}
-#'     \item{node1, node2}{Edge list for Stan / BYM2 scaling.}
+#'     \item{location_ids}{Named integer vector mapping region names to numeric IDs.}
 #'   }
 #' @export
 #'
@@ -79,38 +78,23 @@ dmft_adjacency <- function(shapefile_path = NULL,
     }
   }
 
-  # Adjacency matrix
+  # Adjacency matrix (binary: 0/1)
   adj_matrix <- spdep::nb2mat(nb, style = "B", zero.policy = TRUE)
   n <- nrow(adj_matrix)
   matched_names <- config$regions[config$regions %in% sf_names]
   rownames(adj_matrix) <- matched_names
   colnames(adj_matrix) <- matched_names
 
-  # INLA graph file (temp)
-  graph_path <- tempfile(fileext = ".graph")
-  spdep::nb2INLA(graph_path, nb)
+  # Numeric location IDs for AST (1, 2, ..., n)
+  location_ids <- stats::setNames(seq_len(n), matched_names)
 
-  # Edge list for Stan
-  node1 <- node2 <- integer(0)
-  for (i in seq_len(n)) {
-    for (j in nb[[i]]) {
-      if (j > i) {
-        node1 <- c(node1, i)
-        node2 <- c(node2, j)
-      }
-    }
-  }
-
-  cli_alert_success("Adjacency: {n} regions, {length(node1)} edges")
-
+  cli_alert_success("Adjacency: {n} regions, {sum(adj_matrix) / 2} edges")
 
   list(
-    adj_matrix = adj_matrix,
-    nb         = nb,
-    sf         = sf_ordered,
-    graph_path = graph_path,
-    node1      = node1,
-    node2      = node2
+    adj_matrix   = adj_matrix,
+    nb           = nb,
+    sf           = sf_ordered,
+    location_ids = location_ids
   )
 }
 
@@ -129,7 +113,6 @@ detect_region_col <- function(sf_obj, config) {
     }
   }
   # Try every character column
-
   for (col in nms) {
     if (is.character(sf_obj[[col]]) || is.factor(sf_obj[[col]])) {
       vals <- as.character(sf_obj[[col]])

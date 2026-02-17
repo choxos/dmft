@@ -22,6 +22,6 @@ A tibble with columns: \code{year}, \code{scenario}, \code{mean_proj},
 }
 \description{
 Extracts the temporal trend from a fitted model and generates three
-scenarios (reference, optimistic, pessimistic) using damped RW2
-extrapolation with bounded uncertainty growth.
+scenarios (reference, optimistic, pessimistic) using linear trend
+extrapolation with optional damping and bounded uncertainty.
 }

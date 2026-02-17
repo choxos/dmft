@@ -2,10 +2,10 @@
 utils::globalVariables(c(
 
   # Data columns
-  "province", "province_std", "province_idx", "province_idx2",
-  "year", "year_idx", "year_idx2",
+  "province", "province_std", "province_idx",
+  "year", "year_idx", "year_factor",
   "age_group", "age_group_idx", "age_start", "age_end", "age_mid", "age_weight",
-  "sex", "sex_std", "sex_idx",
+  "sex", "sex_std",
   "n", "row_id", "is_outlier", "is_valid", "study",
 
   # DMFT columns
@@ -16,18 +16,19 @@ utils::globalVariables(c(
   "se_dmft_imputed", "se_DMFT_imputed", "precision",
 
   # Model columns
-  "y", "offset_log_n", "fold",
-  "st_idx", "sa_idx", "ta_idx",
+  "y", "region_std", "location",
+
+  # AST columns
+  "residual_AST", "residual_ast", "predicted_base",
 
   # Prediction columns
-  "eta", "eta_sd", "predicted_dmft", "predicted_DMFT",
-  "dmft_lower", "dmft_upper", "DMFT_lower", "DMFT_upper",
+  "predicted", "lower", "upper",
 
   # Projection columns
-  "scenario", "mean_proj", "lower", "upper",
+  "scenario", "mean_proj",
 
   # Visualization
-  "value", "PRENAME", "region", "predicted",
+  "value", "PRENAME", "region",
 
   # Diagnostic
   "residual", "mean_resid"

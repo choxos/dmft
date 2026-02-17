@@ -1,26 +1,68 @@
-#' Generate predictions from a fitted DMFT model
+#' Generate predictions from a fitted DMFT model with AST smoothing
 #'
 #' Produces predictions for all region-year-age combinations in the
-#' historical period. Uses posterior sampling when available, falling
-#' back to a delta-method approximation.
+#' historical period. Uses AST (Age-Spatial-Temporal) kernel smoothing
+#' on mixed-model residuals, with bootstrap uncertainty intervals.
 #'
 #' @param fit A fitted model from [dmft_fit()].
+#' @param adjacency Adjacency object from [dmft_adjacency()].
 #' @param config A [dmft_config] object.
-#' @param n_posterior Number of posterior samples for uncertainty.
-#'   Set to 0 to use the delta method.
+#' @param n_boot Number of bootstrap replicates for uncertainty.
+#'   Set to 0 to skip uncertainty estimation.
 #'
 #' @returns A tibble with columns: `region`, `year`, `age_group`,
 #'   `predicted`, `lower`, `upper`.
 #' @export
-dmft_predict <- function(fit, config, n_posterior = 100L) {
+dmft_predict <- function(fit, adjacency, config, n_boot = NULL) {
   stopifnot(inherits(config, "dmft_config"))
 
-  mdata    <- attr(fit, "dmft_mdata")
   dentition <- attr(fit, "dmft_dentition")
-  backend  <- attr(fit, "dmft_backend") %||% "inla"
+  dmft_max  <- if (dentition == "deciduous") config$dmft_max_deciduous
+               else config$dmft_max_permanent
+  if (is.null(n_boot)) n_boot <- config$n_boot
+
+  # Apply AST smoothing
+  ast_result <- dmft_ast(fit, adjacency, config, dentition)
+  estimates <- ast_result$estimates
+
+  # Bootstrap uncertainty
+  if (n_boot > 0) {
+    cli_alert_info("Computing bootstrap uncertainty ({n_boot} replicates)...")
+    ui <- compute_bootstrap_ui(fit, adjacency, config, dentition, n_boot, dmft_max)
+    estimates <- merge(estimates, ui, by = c("region", "year", "age_group"), all.x = TRUE)
+    estimates$lower[is.na(estimates$lower)] <- pmax(0, estimates$predicted[is.na(estimates$lower)] * 0.5)
+    estimates$upper[is.na(estimates$upper)] <- pmin(dmft_max, estimates$predicted[is.na(estimates$upper)] * 1.5)
+  } else {
+    estimates$lower <- pmax(0, estimates$predicted * 0.75)
+    estimates$upper <- pmin(dmft_max, estimates$predicted * 1.25)
+  }
+
+  estimates <- dplyr::as_tibble(estimates)
+  estimates <- estimates[, c("region", "year", "age_group", "predicted", "lower", "upper")]
+  estimates <- estimates[order(estimates$region, estimates$year, estimates$age_group), ]
+
+  cli_alert_success("Predictions: {nrow(estimates)} cells ({dentition})")
+  estimates
+}
+
+
+#' Compute bootstrap uncertainty intervals
+#' @keywords internal
+compute_bootstrap_ui <- function(fit, adjacency, config, dentition, n_boot, dmft_max) {
+  mdata <- attr(fit, "dmft_mdata")
   age_groups <- mdata$age_groups
-  dmft_max <- if (dentition == "deciduous") config$dmft_max_deciduous
-              else config$dmft_max_permanent
+  set.seed(config$seed)
+
+  # Extract fixed and random effects distributions
+  fixed_effects <- lme4::fixef(fit)
+  re_region <- lme4::ranef(fit)$region_std
+  re_year   <- lme4::ranef(fit)$year_factor
+
+  # Get variance components
+  vc <- as.data.frame(lme4::VarCorr(fit))
+  sigma_region <- vc$sdcor[vc$grp == "region_std"]
+  sigma_year   <- vc$sdcor[vc$grp == "year_factor"]
+  sigma_resid  <- stats::sigma(fit)
 
   # Prediction grid
   grid <- expand.grid(
@@ -29,125 +71,34 @@ dmft_predict <- function(fit, config, n_posterior = 100L) {
     age_group = age_groups,
     stringsAsFactors = FALSE
   )
-  grid$province_idx   <- match(grid$region, config$regions)
-  grid$year_idx       <- grid$year - config$year_start + 1L
-  grid$age_group_idx  <- match(grid$age_group, age_groups)
-  grid <- dplyr::as_tibble(grid)
 
-  if (backend == "inla" && n_posterior > 0) {
-    preds <- predict_posterior_inla(fit, grid, n_posterior, dmft_max)
-  } else if (backend == "inla") {
-    preds <- predict_delta_inla(fit, grid, dmft_max)
-  } else {
-    preds <- predict_stan(fit, grid, dmft_max)
-  }
+  # Matrix to store bootstrap predictions
+  n_cells <- nrow(grid)
+  boot_preds <- matrix(NA_real_, n_cells, n_boot)
 
-  preds
-}
+  for (b in seq_len(n_boot)) {
+    # Resample random effects from their estimated distributions
+    re_r <- stats::rnorm(length(config$regions), 0, sigma_region)
+    names(re_r) <- config$regions
+    re_y <- stats::rnorm(config$n_years, 0, sigma_year)
+    names(re_y) <- as.character(config$historical_years)
 
-
-# -- Internal prediction functions ---------------------------------------------
-
-#' @keywords internal
-predict_posterior_inla <- function(fit, grid, n_posterior, dmft_max) {
-  samples <- tryCatch(
-    INLA::inla.posterior.sample(n_posterior, fit),
-    error = function(e) NULL
-  )
-  if (is.null(samples)) {
-    cli_alert_warning("Posterior sampling failed; using delta method")
-    return(predict_delta_inla(fit, grid, dmft_max))
-  }
-
-  n_pred <- nrow(grid)
-  pred_mat <- matrix(NA_real_, n_pred, n_posterior)
-
-  for (s in seq_len(n_posterior)) {
-    lat <- samples[[s]]$latent
-    rn  <- rownames(lat)
-    intercept_s <- lat[grep("^\\(Intercept\\)", rn), 1]
-    prov_s <- lat[grep("^province_idx:", rn), 1]
-    year_s <- lat[grep("^year_idx:", rn), 1]
-    age_s  <- lat[grep("^age_group_idx:", rn), 1]
-
-    for (i in seq_len(n_pred)) {
-      eta <- intercept_s
-      pi <- grid$province_idx[i]; yi <- grid$year_idx[i]; ai <- grid$age_group_idx[i]
-      if (!is.na(pi) && pi <= length(prov_s)) eta <- eta + prov_s[pi]
-      if (!is.na(yi) && yi <= length(year_s)) eta <- eta + year_s[yi]
-      if (!is.na(ai) && ai <= length(age_s))  eta <- eta + age_s[ai]
-      pred_mat[i, s] <- eta
+    # Compute predictions with resampled effects
+    for (i in seq_len(n_cells)) {
+      pred <- fixed_effects[["(Intercept)"]]
+      r <- grid$region[i]
+      y <- as.character(grid$year[i])
+      if (r %in% names(re_r)) pred <- pred + re_r[r]
+      if (y %in% names(re_y)) pred <- pred + re_y[y]
+      # Add residual noise
+      pred <- pred + stats::rnorm(1, 0, sigma_resid)
+      boot_preds[i, b] <- pred
     }
   }
 
-  grid$predicted <- pmax(0, rowMeans(pred_mat, na.rm = TRUE))
-  grid$lower     <- pmax(0, apply(pred_mat, 1, quantile, 0.025, na.rm = TRUE))
-  grid$upper     <- pmin(dmft_max, apply(pred_mat, 1, quantile, 0.975, na.rm = TRUE))
-  grid
-}
+  # Compute 2.5th and 97.5th percentiles
+  grid$lower <- pmax(0, apply(boot_preds, 1, stats::quantile, 0.025, na.rm = TRUE))
+  grid$upper <- pmin(dmft_max, apply(boot_preds, 1, stats::quantile, 0.975, na.rm = TRUE))
 
-
-#' @keywords internal
-predict_delta_inla <- function(fit, grid, dmft_max) {
-  spatial  <- fit$summary.random$province_idx
-  temporal <- fit$summary.random$year_idx
-  age_eff  <- fit$summary.random$age_group_idx
-  intercept    <- fit$summary.fixed["(Intercept)", "mean"]
-  intercept_sd <- fit$summary.fixed["(Intercept)", "sd"]
-
-  eta <- rep(intercept, nrow(grid))
-  eta_var <- rep(intercept_sd^2, nrow(grid))
-
-  for (i in seq_len(nrow(grid))) {
-    pi <- grid$province_idx[i]; yi <- grid$year_idx[i]; ai <- grid$age_group_idx[i]
-    if (!is.na(pi) && pi <= nrow(spatial)) {
-      eta[i]     <- eta[i] + spatial$mean[pi]
-      eta_var[i] <- eta_var[i] + spatial$sd[pi]^2
-    }
-    if (!is.na(yi) && yi <= nrow(temporal)) {
-      eta[i]     <- eta[i] + temporal$mean[yi]
-      eta_var[i] <- eta_var[i] + temporal$sd[yi]^2
-    }
-    if (!is.na(ai) && ai <= nrow(age_eff)) {
-      eta[i]     <- eta[i] + age_eff$mean[ai]
-      eta_var[i] <- eta_var[i] + age_eff$sd[ai]^2
-    }
-  }
-
-  eta_sd <- sqrt(eta_var)
-  grid$predicted <- pmax(0, eta)
-  grid$lower     <- pmax(0, eta - 1.96 * eta_sd)
-  grid$upper     <- pmin(dmft_max, eta + 1.96 * eta_sd)
-  grid
-}
-
-
-#' @keywords internal
-predict_stan <- function(fit, grid, dmft_max) {
-  draws <- fit$stan_fit$draws(format = "matrix")
-  alpha   <- draws[, "alpha"]
-  prov_cols <- grep("^province_effect\\[", colnames(draws))
-  year_cols <- grep("^year_effect\\[", colnames(draws))
-  age_cols  <- grep("^age_effect\\[", colnames(draws))
-  prov_d <- draws[, prov_cols, drop = FALSE]
-  year_d <- draws[, year_cols, drop = FALSE]
-  age_d  <- draws[, age_cols, drop = FALSE]
-
-  n_draws <- length(alpha)
-  n_pred  <- nrow(grid)
-  pred_mat <- matrix(NA_real_, n_pred, n_draws)
-
-  for (i in seq_len(n_pred)) {
-    eta <- alpha
-    pi <- grid$province_idx[i]; yi <- grid$year_idx[i]; ai <- grid$age_group_idx[i]
-    if (!is.na(pi) && pi <= ncol(prov_d)) eta <- eta + prov_d[, pi]
-    if (!is.na(yi) && yi <= ncol(year_d)) eta <- eta + year_d[, yi]
-    if (!is.na(ai) && ai <= ncol(age_d))  eta <- eta + age_d[, ai]
-    pred_mat[i, ] <- eta
-  }
-
-  grid$predicted <- pmax(0, rowMeans(pred_mat))
-  grid$lower     <- pmax(0, apply(pred_mat, 1, quantile, 0.025))
-  grid$upper     <- pmin(dmft_max, apply(pred_mat, 1, quantile, 0.975))
-  grid
+  grid[, c("region", "year", "age_group", "lower", "upper")]
 }

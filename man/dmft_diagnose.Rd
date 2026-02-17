@@ -13,10 +13,9 @@ dmft_diagnose(fit, config)
 }
 \value{
 A list with elements: \code{fit_stats}, \code{residuals}, \code{spatial},
-\code{validity}.
+\code{variance_components}, \code{validity}.
 }
 \description{
-Computes fit statistics (DIC, WAIC), residual diagnostics (RMSE, MAE),
-spatial autocorrelation of residuals (Moran's I), and prediction validity
-checks.
+Computes fit statistics (AIC, BIC), residual diagnostics (RMSE, MAE),
+spatial autocorrelation of residuals (Moran's I), and variance components.
 }

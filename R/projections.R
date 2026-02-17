@@ -1,8 +1,8 @@
 #' Project DMFT trends into the future
 #'
 #' Extracts the temporal trend from a fitted model and generates three
-#' scenarios (reference, optimistic, pessimistic) using damped RW2
-#' extrapolation with bounded uncertainty growth.
+#' scenarios (reference, optimistic, pessimistic) using linear trend
+#' extrapolation with optional damping and bounded uncertainty.
 #'
 #' @param fit A fitted model from [dmft_fit()].
 #' @param estimates Predictions from [dmft_predict()].
@@ -19,14 +19,13 @@ dmft_project <- function(fit, estimates, config, damping_factor = 0.95) {
     cli_abort("Projection range not set in config. Use `projection_range` in dmft_config().")
   }
 
-  backend   <- attr(fit, "dmft_backend") %||% "inla"
   dentition <- attr(fit, "dmft_dentition")
   dmft_max  <- if (dentition == "deciduous") config$dmft_max_deciduous
                else config$dmft_max_permanent
   n_forecast <- config$projection_end - config$projection_start + 1L
 
-  # Extract temporal trend
-  trend <- extract_trend(fit, backend)
+  # Extract temporal trend from year random effects
+  trend <- extract_year_trend(fit, config)
 
   # Generate scenarios
   scenarios <- config$scenarios
@@ -34,18 +33,17 @@ dmft_project <- function(fit, estimates, config, damping_factor = 0.95) {
 
   for (sname in names(scenarios)) {
     adj <- scenarios[[sname]]$adjustment
-    proj_mat <- project_scenario(
-      trend, n_forecast, config$n_draws, adj, damping_factor, dmft_max,
-      config$seed + match(sname, names(scenarios)) - 1L
+    proj <- project_linear(
+      trend, n_forecast, adj, damping_factor, dmft_max, config$seed
     )
 
     proj_years <- seq.int(config$projection_start, config$projection_end)
     proj_list[[sname]] <- dplyr::tibble(
       year      = proj_years,
       scenario  = scenarios[[sname]]$name,
-      mean_proj = rowMeans(proj_mat),
-      lower     = apply(proj_mat, 1, quantile, 0.025),
-      upper     = apply(proj_mat, 1, quantile, 0.975)
+      mean_proj = proj$mean,
+      lower     = proj$lower,
+      upper     = proj$upper
     )
   }
 
@@ -57,66 +55,62 @@ dmft_project <- function(fit, estimates, config, damping_factor = 0.95) {
 
 # -- Internal helpers ----------------------------------------------------------
 
+#' Extract temporal trend from year random effects
 #' @keywords internal
-extract_trend <- function(fit, backend) {
-  if (backend == "inla") {
-    te <- fit$summary.random$year_idx
-    n_years <- nrow(te)
-    recent <- max(1, n_years - 9):n_years
-    recent_eff <- te$mean[recent]
-    lm_fit <- lm(recent_eff ~ seq_along(recent_eff))
+extract_year_trend <- function(fit, config) {
+  re_year <- lme4::ranef(fit)$year_factor
+  year_effects <- re_year[, 1]
+  year_labels <- as.integer(rownames(re_year))
 
-    hyper_names <- rownames(fit$summary.hyperpar)
-    yr_idx <- grep("year", hyper_names, ignore.case = TRUE)
-    rw2_sd <- if (length(yr_idx) > 0) 1 / sqrt(fit$summary.hyperpar$mean[yr_idx[1]])
-              else sd(diff(diff(te$mean)))
+  # Use last 10 years for trend estimation
+  n_years <- length(year_effects)
+  n_recent <- min(10, n_years)
+  recent_idx <- (n_years - n_recent + 1):n_years
+  recent_effects <- year_effects[recent_idx]
 
-    list(
-      last_effect = te$mean[n_years],
-      last_sd     = te$sd[n_years],
-      prev_effect = te$mean[n_years - 1],
-      prev_sd     = te$sd[n_years - 1],
-      rw2_sd      = rw2_sd
-    )
-  } else {
-    # Stan: use year_effect draws
-    draws <- fit$stan_fit$draws(format = "matrix")
-    ye_cols <- grep("^year_effect\\[", colnames(draws))
-    ye <- draws[, ye_cols, drop = FALSE]
-    n_years <- ncol(ye)
+  # Linear trend from recent period
+  lm_fit <- stats::lm(recent_effects ~ seq_along(recent_effects))
+  annual_trend <- stats::coef(lm_fit)[2]
+  trend_se <- summary(lm_fit)$coefficients[2, 2]
 
-    list(
-      last_effect = mean(ye[, n_years]),
-      last_sd     = sd(ye[, n_years]),
-      prev_effect = mean(ye[, n_years - 1]),
-      prev_sd     = sd(ye[, n_years - 1]),
-      rw2_sd      = sd(diff(diff(colMeans(ye))))
-    )
-  }
+  # Last observed values
+  intercept <- lme4::fixef(fit)[["(Intercept)"]]
+  last_national <- intercept + year_effects[n_years]
+
+  # Residual SD for uncertainty
+  sigma_resid <- stats::sigma(fit)
+
+  list(
+    last_value   = last_national,
+    annual_trend = annual_trend,
+    trend_se     = trend_se,
+    sigma_resid  = sigma_resid
+  )
 }
 
 
+#' Project using linear extrapolation with damping
 #' @keywords internal
-project_scenario <- function(trend, n_forecast, n_samples, adjustment,
-                              damping_factor, dmft_max, seed) {
+project_linear <- function(trend, n_forecast, adjustment,
+                            damping_factor, dmft_max, seed) {
   set.seed(seed)
-  proj <- matrix(NA_real_, n_forecast, n_samples)
 
-  for (s in seq_len(n_samples)) {
-    current <- trend$last_effect + rnorm(1, 0, trend$last_sd)
-    prev    <- trend$prev_effect + rnorm(1, 0, trend$prev_sd)
+  mean_proj  <- numeric(n_forecast)
+  lower_proj <- numeric(n_forecast)
+  upper_proj <- numeric(n_forecast)
 
-    for (t in seq_len(n_forecast)) {
-      tr <- current - prev
-      expected <- current + damping_factor^t * tr + adjustment
-      noise_sd <- trend$rw2_sd * sqrt(t) / sqrt(1 + t / n_forecast)
-      projected <- expected + rnorm(1, 0, noise_sd)
-      projected <- max(0, min(dmft_max, projected))
-      proj[t, s] <- projected
-      prev <- current
-      current <- projected
-    }
+  for (t in seq_len(n_forecast)) {
+    # Damped linear extrapolation
+    damped_trend <- trend$annual_trend * damping_factor^t
+    expected <- trend$last_value + t * damped_trend + t * adjustment
+
+    # Growing uncertainty with time
+    uncertainty_sd <- sqrt(trend$sigma_resid^2 + (t * trend$trend_se)^2)
+
+    mean_proj[t]  <- pmax(0, pmin(dmft_max, expected))
+    lower_proj[t] <- pmax(0, expected - qnorm(0.975) * uncertainty_sd)
+    upper_proj[t] <- pmin(dmft_max, expected + qnorm(0.975) * uncertainty_sd)
   }
 
-  proj
+  list(mean = mean_proj, lower = lower_proj, upper = upper_proj)
 }

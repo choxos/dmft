@@ -33,8 +33,8 @@ A list with elements \code{config}, \code{clean_data}, \code{adjacency},
 }
 \description{
 Orchestrates the complete workflow: data loading, cleaning, spatial
-structure, model fitting, prediction, diagnostics, and optional
-projections.
+structure, mixed-effects model fitting, AST smoothing, bootstrap
+uncertainty, diagnostics, and optional projections.
 }
 \examples{
 \dontrun{

@@ -4,11 +4,11 @@
 \name{dmft-package}
 \alias{dmft}
 \alias{dmft-package}
-\title{dmft: Bayesian Hierarchical Modeling of Dental Caries (DMFT/dmft)}
+\title{dmft: Age-Spatial-Temporal Modeling of Dental Caries (DMFT/dmft)}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Implements GBD-style Bayesian hierarchical models for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level. Combines BYM2 spatial random effects, RW2 temporal trends, and RW1 age effects with Gaussian meta-regression. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations. Two inference backends are supported: INLA (fast approximate Bayesian) and Stan (full MCMC).
+Implements Age-Spatial-Temporal (AST) models for estimating dental caries burden (DMFT/dmft indices) at subnational level. Uses a two-stage approach: (1) random intercept mixed-effects model via 'lme4' with optional fixed covariates, and (2) AST kernel-smoothing of residuals across space, time, and age dimensions. Uncertainty is quantified via bootstrap. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations.
 }
 \seealso{
 Useful links:

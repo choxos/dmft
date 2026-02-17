@@ -2,16 +2,9 @@
 % Please edit documentation in R/model_fit.R
 \name{dmft_fit}
 \alias{dmft_fit}
-\title{Fit a Bayesian hierarchical model for DMFT/dmft}
+\title{Fit a random intercept mixed-effects model for DMFT/dmft}
 \usage{
-dmft_fit(
-  data,
-  adjacency,
-  dentition = c("deciduous", "permanent"),
-  config,
-  family = "gaussian",
-  include_interactions = TRUE
-)
+dmft_fit(data, adjacency, dentition = c("deciduous", "permanent"), config)
 }
 \arguments{
 \item{data}{A data frame (one of the dentition subsets from \code{\link[=dmft_clean]{dmft_clean()}}).}
@@ -21,18 +14,13 @@ dmft_fit(
 \item{dentition}{\code{"deciduous"} or \code{"permanent"}.}
 
 \item{config}{A \link{dmft_config} object.}
-
-\item{family}{Likelihood family: \code{"gaussian"} (default, meta-regression)
-or \code{"nbinomial"}.}
-
-\item{include_interactions}{Logical; include space-time, space-age, and
-time-age IID interaction random effects.}
 }
 \value{
-A fitted model object (INLA or wrapped cmdstanr fit).
+A fitted lme4 model object with metadata attributes.
 }
 \description{
-Implements a GBD-style spatial-temporal-age model with BYM2 spatial
-random effects, RW2 temporal trends, RW1 age effects, and IID sex
-effects. Uses Gaussian meta-regression (identity link) by default.
+Stage 1 of the AST methodology: fits a random intercept mixed-effects model
+via \code{\link[lme4:lmer]{lme4::lmer()}} with optional fixed covariates and random province/year
+intercepts. Inverse-variance weighting is applied when standard errors are
+available.
 }
