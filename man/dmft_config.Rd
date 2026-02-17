@@ -18,6 +18,7 @@ dmft_config(
   covariates = NULL,
   ast_params = list(par_space = 0.9, par_time = 2, par_age = 1, weight_coverage = 0.9),
   n_boot = 1000L,
+  stan_settings = NULL,
   seed = 12345L,
   region_mapping = NULL
 )
@@ -54,6 +55,11 @@ fixed effects in the mixed model. If \code{NULL}, only the intercept is used.}
 }}
 
 \item{n_boot}{Number of bootstrap replicates for uncertainty intervals.}
+
+\item{stan_settings}{Optional named list of Stan sampling settings for the
+experimental Bayesian backend (see \code{\link[=dmft_fit_bayes]{dmft_fit_bayes()}}). Elements:
+\code{chains}, \code{iter_warmup}, \code{iter_sampling}, \code{adapt_delta}, \code{max_treedepth}.
+If \code{NULL}, sensible defaults are used.}
 
 \item{seed}{Random seed for reproducibility.}
 

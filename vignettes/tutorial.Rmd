@@ -1,0 +1,421 @@
+---
+title: "Getting Started with dmft"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with dmft}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Overview
+
+The **dmft** package implements the Age-Spatial-Temporal (AST) model for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level. It uses a two-stage approach:
+
+1. **Stage 1**: A random intercept mixed-effects model via `lme4` (or optionally Stan for the Bayesian backend).
+2. **Stage 2**: AST kernel smoothing of residuals across space, time, and age dimensions using Kronecker-product weight matrices.
+
+This tutorial walks through the full analysis pipeline using synthetic (phantom) data.
+
+## Installation
+
+```{r eval=FALSE}
+# Install from GitHub
+pak::pak("choxos/dmft")
+```
+
+For the experimental Bayesian backend, also install cmdstanr:
+
+```{r eval=FALSE}
+install.packages("cmdstanr",
+                  repos = c("https://stan-dev.r-universe.dev", getOption("repos")))
+cmdstanr::install_cmdstan()
+```
+
+## Step 1: Configuration
+
+Every analysis begins with `dmft_config()`, which defines the regions, time period, age groups, and model parameters.
+
+```{r}
+library(dmft)
+
+cfg <- dmft_config(
+  regions = c("Region_A", "Region_B", "Region_C",
+              "Region_D", "Region_E"),
+  region_col = "province",
+  year_range = c(2000, 2020),
+  projection_range = c(2021, 2030),
+  age_groups_deciduous = c("0-4", "5-9", "10-14"),
+  age_groups_permanent = c("5-9", "10-14", "15-19", "20-24",
+                           "25-29", "30-34", "35-39", "40-44",
+                           "45-49", "50-54", "55-59", "60+"),
+  ast_params = list(
+    par_space = 0.9,
+    par_time = 2,
+    par_age = 1,
+    weight_coverage = 0.9
+  ),
+  n_boot = 200,
+  seed = 42
+)
+
+cfg
+```
+
+Key parameters:
+
+- **`regions`**: Character vector of subnational region names. These must match your data and shapefile.
+- **`region_col`**: The column name in your data containing region names.
+- **`year_range`**: Historical period `c(start, end)`.
+- **`projection_range`**: Future projection period (optional).
+- **`ast_params`**: Smoothing parameters for the AST kernel (see Model Details below).
+- **`n_boot`**: Number of bootstrap replicates for uncertainty intervals.
+- **`covariates`**: Optional fixed-effect covariates (column names in your data).
+
+## Step 2: Generate Phantom Data
+
+For demonstration, we generate synthetic data. In practice, you would load your own CSV/XLSX with `dmft_load()`.
+
+```{r}
+phantom <- dmft_phantom(cfg, dentition = "permanent", n_per_cell = 2)
+head(phantom)
+```
+
+The phantom data mimics realistic study-level data with known age-by-region patterns, a temporal trend, and random missingness.
+
+### Loading Your Own Data
+
+```{r eval=FALSE}
+# From CSV
+raw <- dmft_load("path/to/your_data.csv", config = cfg)
+
+# From Excel
+raw <- dmft_load("path/to/your_data.xlsx", config = cfg)
+```
+
+Your data should have at minimum:
+
+| Column | Description |
+|--------|-------------|
+| Region column (matching `region_col`) | Region name |
+| `year` | Year of data collection |
+| `age_start` | Start of age range |
+| `age_end` | End of age range |
+| `mean_dmft` and/or `mean_DMFT` | Mean dmft (deciduous) / DMFT (permanent) |
+| `n` | Sample size (optional, used for weighting) |
+| `sd_dmft` / `se_dmft` | Standard deviation / error (optional, imputed if missing) |
+
+## Step 3: Data Cleaning
+
+`dmft_clean()` performs column standardization, region name mapping, age group assignment, outlier flagging, and uncertainty imputation.
+
+```{r}
+clean <- dmft_clean(phantom, config = cfg)
+names(clean)
+```
+
+The result is a list with `$deciduous` and `$permanent` tibbles. Each has standardized columns including `se_imputed` for inverse-variance weighting.
+
+```{r}
+str(clean$permanent[, c("region_std", "year", "age_group", "mean_DMFT",
+                         "se_imputed", "se_source")])
+```
+
+### Uncertainty Imputation
+
+The package uses a hierarchical strategy to ensure every observation has a standard error:
+
+1. Use SE if reported directly
+2. Compute SE from SD and sample size
+3. Compute SE from confidence intervals
+4. Estimate SD from a default coefficient of variation (CV), then compute SE
+
+You can control the default CV via `cv_default` in `dmft_config()`.
+
+## Step 4: Spatial Adjacency
+
+`dmft_adjacency()` builds the neighbourhood graph from a shapefile. Since we are using phantom data without a real shapefile, we construct a simple adjacency manually:
+
+```{r}
+# For real data, use:
+# adj <- dmft_adjacency(shapefile_path = "regions.shp", config = cfg)
+
+# For phantom data, create a mock adjacency
+adj_matrix <- matrix(0, 5, 5)
+rownames(adj_matrix) <- colnames(adj_matrix) <- cfg$regions
+# Chain topology: A-B-C-D-E
+adj_matrix[1,2] <- adj_matrix[2,1] <- 1
+adj_matrix[2,3] <- adj_matrix[3,2] <- 1
+adj_matrix[3,4] <- adj_matrix[4,3] <- 1
+adj_matrix[4,5] <- adj_matrix[5,4] <- 1
+
+# Build spdep neighbourhood
+nb <- list()
+for (i in 1:5) nb[[i]] <- as.integer(which(adj_matrix[i,] == 1))
+class(nb) <- "nb"
+attr(nb, "region.id") <- cfg$regions
+
+adj <- list(
+  adj_matrix   = adj_matrix,
+  nb           = nb,
+  sf           = NULL,
+  location_ids = setNames(1:5, cfg$regions)
+)
+```
+
+With real shapefiles, the function handles Queen contiguity, island detection, and automatic region name matching.
+
+## Step 5: Model Fitting (Frequentist)
+
+`dmft_fit()` runs Stage 1 of the AST methodology: a random intercept mixed-effects model via `lme4::lmer()`.
+
+```{r}
+fit <- dmft_fit(
+  data      = clean$permanent,
+  adjacency = adj,
+  dentition = "permanent",
+  config    = cfg
+)
+```
+
+The model formula is:
+
+```
+y ~ 1 + [covariates] + (1|region_std) + (1|year_factor)
+```
+
+with inverse-variance weights from `se_imputed`.
+
+### Adding Covariates
+
+To include fixed-effect covariates:
+
+```{r eval=FALSE}
+cfg_cov <- dmft_config(
+  regions = cfg$regions,
+  region_col = "province",
+  year_range = c(2000, 2020),
+  covariates = c("fluoridation_pct", "sugar_consumption")
+)
+```
+
+## Step 6: Predictions with AST Smoothing
+
+`dmft_predict()` applies Stage 2 (AST kernel smoothing) and computes bootstrap uncertainty intervals.
+
+```{r}
+estimates <- dmft_predict(fit, adj, config = cfg, n_boot = 100)
+head(estimates)
+```
+
+The result is a tibble with one row per region-year-age_group cell:
+
+- `predicted`: AST-smoothed point estimate
+- `lower`, `upper`: 95% bootstrap confidence intervals
+
+### How AST Smoothing Works
+
+Residuals from Stage 1 are smoothed using three kernel weight matrices:
+
+1. **Spatial**: Adjacency-based weights with parameter `par_space` (default 0.9). Self-weight is high; adjacent regions get moderate weight; non-adjacent get zero.
+2. **Temporal**: LOESS-style cubic power weights with parameter `par_time` (default 2). Nearby years get high weight, distant years get low weight.
+3. **Age**: Exponential decay with parameter `par_age` (default 1). Adjacent age groups get high weight, distant groups get low weight.
+
+The combined weight matrix is the Kronecker product: `W = kronecker(space_mat, kronecker(age_mat, time_mat))`, row-normalized to sum to 1.
+
+## Step 7: Diagnostics
+
+`dmft_diagnose()` computes fit statistics, residual diagnostics, spatial autocorrelation tests, and prediction validity checks.
+
+```{r}
+diag <- dmft_diagnose(fit, config = cfg)
+```
+
+Key diagnostic outputs:
+
+```{r}
+# Fit statistics
+diag$fit_stats
+
+# Variance components
+diag$variance_components
+
+# Residual metrics
+cat(sprintf("RMSE: %.3f\nMAE:  %.3f\nBias: %.4f\n",
+            diag$residuals$rmse, diag$residuals$mae, diag$residuals$bias))
+
+# Spatial autocorrelation (Moran's I)
+if (!is.na(diag$spatial$p.value)) {
+  cat(sprintf("Moran's I: %.4f (p = %.4f)\n",
+              diag$spatial$statistic, diag$spatial$p.value))
+}
+```
+
+A non-significant Moran's I (p > 0.05) suggests the AST smoothing has adequately captured spatial structure.
+
+## Step 8: Projections
+
+`dmft_project()` extrapolates temporal trends with three scenarios:
+
+- **Reference**: continuation of the observed trend
+- **Optimistic**: accelerated improvement (default: -0.02/year adjustment)
+- **Pessimistic**: slower improvement (default: +0.02/year adjustment)
+
+```{r}
+projections <- dmft_project(fit, estimates, config = cfg)
+head(projections)
+```
+
+The trend is estimated from the last 10 years of year random effects, with damping (default 0.95 per year) to prevent unrealistic extrapolation.
+
+## Step 9: Visualization
+
+### Temporal Trends
+
+```{r fig.width=8, fig.height=5}
+dmft_plot_trends(estimates, projections)
+```
+
+### Choropleth Maps
+
+With a real shapefile:
+
+```{r eval=FALSE}
+dmft_plot_map(estimates, adj$sf, year = 2020)
+```
+
+## Full Pipeline
+
+For convenience, `dmft_run()` orchestrates all steps in a single call:
+
+```{r eval=FALSE}
+results <- dmft_run(
+  data_path      = "my_data.csv",
+  shapefile_path = "my_regions.shp",
+  config         = cfg,
+  dentition      = "permanent"
+)
+
+# Access results
+results$estimates$permanent
+results$diagnostics$permanent
+results$projections$permanent
+```
+
+## Bayesian Backend (Experimental)
+
+The Bayesian backend uses Stan (via cmdstanr) for Stage 1 instead of lme4. It provides posterior credible intervals instead of bootstrap intervals.
+
+### Setup
+
+```{r eval=FALSE}
+install.packages("cmdstanr",
+                  repos = c("https://stan-dev.r-universe.dev", getOption("repos")))
+cmdstanr::install_cmdstan()
+```
+
+### Step-by-Step
+
+```{r eval=FALSE}
+# Fit with Stan
+fit_b <- dmft_fit_bayes(
+  data      = clean$permanent,
+  adjacency = adj,
+  dentition = "permanent",
+  config    = cfg
+)
+
+# AST smoothing + posterior credible intervals
+estimates_b <- dmft_predict_bayes(fit_b, adj, config = cfg)
+
+# Bayesian diagnostics (Rhat, ESS, LOO-CV)
+diag_b <- dmft_diagnose_bayes(fit_b, config = cfg)
+
+# Projections using posterior draws
+proj_b <- dmft_project_bayes(fit_b, estimates_b, config = cfg)
+```
+
+### Full Pipeline (Bayesian)
+
+```{r eval=FALSE}
+results_b <- dmft_run(
+  data_path      = "my_data.csv",
+  shapefile_path = "my_regions.shp",
+  config         = cfg,
+  backend        = "bayesian"
+)
+```
+
+### Custom Stan Settings
+
+```{r eval=FALSE}
+cfg_bayes <- dmft_config(
+  regions = c("Region_A", "Region_B", "Region_C"),
+  region_col = "province",
+  year_range = c(2000, 2020),
+  stan_settings = list(
+    chains        = 4,
+    iter_warmup   = 1000,
+    iter_sampling = 1000,
+    adapt_delta   = 0.95,
+    max_treedepth = 12
+  )
+)
+```
+
+### Bayesian Diagnostics
+
+The Bayesian diagnostics include:
+
+- **Rhat**: Should be < 1.01 for all parameters
+- **ESS** (bulk and tail): Should be > 400
+- **Divergences**: Should be 0
+- **LOO-CV**: Leave-one-out cross-validation via `loo::loo()`
+- **Posterior predictive checks**: Coverage of observed data by posterior predictive intervals
+- **Variance decomposition**: From posterior draws of sigma parameters
+
+## Model Details
+
+### Stage 1: Mixed-Effects Model
+
+The model for observation $i$:
+
+$$y_i \sim \text{Normal}(\mu_i, \sigma^2 + \text{se}_i^2)$$
+
+$$\mu_i = \beta_0 + X_i\beta + b_{\text{region}[i]} + b_{\text{year}[i]}$$
+
+$$b_{\text{region}} \sim \text{Normal}(0, \sigma_{\text{region}}^2)$$
+
+$$b_{\text{year}} \sim \text{Normal}(0, \sigma_{\text{year}}^2)$$
+
+Where $\text{se}_i$ is the known (or imputed) standard error for each study, providing inverse-variance weighting.
+
+### Stage 2: AST Kernel Smoothing
+
+Residuals $r_i = y_i - \hat{y}_i$ are smoothed using:
+
+$$\hat{r}_{a,t,s} = \sum_{a',t',s'} W_{a,a'} \cdot W_{t,t'} \cdot W_{s,s'} \cdot r_{a',t',s'}$$
+
+where the weight matrices are:
+
+- **Spatial**: $W_S(i,j) = \rho$ if $i=j$, $\rho(1-\rho)$ if adjacent, 0 otherwise
+- **Temporal**: $W_T(i,j) = (1 - (|i-j|/T)^\lambda)^3$ (LOESS cubic power)
+- **Age**: $W_A(i,j) = \exp(-\omega|i-j|)$ (exponential decay)
+
+The combined weight matrix is: $W = W_S \otimes W_A \otimes W_T$ (Kronecker product), row-normalized.
+
+Final estimates: $\hat{y}_{a,t,s} = \hat{\mu}_{a,t,s} + \hat{r}_{a,t,s}$
+
+## References
+
+- Shoaee S, et al. (2022). Subnational estimation of dental caries burden. *BMC Oral Health*, 22:634.
+- Shoaee S, et al. (2025). Subnational estimation using AST models. *BMC Oral Health*, 25:1490.
+- Foreman KJ, et al. (2012). Modeling causes of death: an integrated approach using CODEm. *Population Health Metrics*, 10:1.

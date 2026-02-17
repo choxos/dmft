@@ -7,7 +7,8 @@
 dmft_ast(fit, adjacency, config, dentition = c("deciduous", "permanent"))
 }
 \arguments{
-\item{fit}{A fitted lme4 model from \code{\link[=dmft_fit]{dmft_fit()}}.}
+\item{fit}{A fitted model from \code{\link[=dmft_fit]{dmft_fit()}} (lme4) or \code{\link[=dmft_fit_bayes]{dmft_fit_bayes()}}
+(Bayesian). Both are supported transparently.}
 
 \item{adjacency}{Adjacency object from \code{\link[=dmft_adjacency]{dmft_adjacency()}}.}
 

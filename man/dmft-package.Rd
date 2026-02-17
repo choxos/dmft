@@ -4,11 +4,37 @@
 \name{dmft-package}
 \alias{dmft}
 \alias{dmft-package}
-\title{dmft: Age-Spatial-Temporal Modeling of Dental Caries (DMFT/dmft)}
+\title{dmft: Age-Spatial-Temporal Modeling of Dental Caries}
 \description{
-\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+Implements Age-Spatial-Temporal (AST) models for estimating
+dental caries burden (DMFT/dmft indices) at subnational level. Uses a
+two-stage approach: (1) random intercept mixed-effects model via lme4
+(or Stan for the experimental Bayesian backend), and (2) AST
+kernel-smoothing of residuals across space, time, and age dimensions.
+}
+\details{
+The main workflow functions are:
+\itemize{
+\item \code{\link[=dmft_config]{dmft_config()}}: Set up analysis parameters
+\item \code{\link[=dmft_load]{dmft_load()}}: Load study-level data
+\item \code{\link[=dmft_clean]{dmft_clean()}}: Clean and standardize data
+\item \code{\link[=dmft_adjacency]{dmft_adjacency()}}: Build spatial adjacency from shapefile
+\item \code{\link[=dmft_fit]{dmft_fit()}}: Fit mixed-effects model (frequentist)
+\item \code{\link[=dmft_predict]{dmft_predict()}}: AST smoothing + bootstrap uncertainty
+\item \code{\link[=dmft_diagnose]{dmft_diagnose()}}: Model diagnostics
+\item \code{\link[=dmft_project]{dmft_project()}}: Future trend projections
+\item \code{\link[=dmft_run]{dmft_run()}}: Full pipeline in one call
+}
 
-Implements Age-Spatial-Temporal (AST) models for estimating dental caries burden (DMFT/dmft indices) at subnational level. Uses a two-stage approach: (1) random intercept mixed-effects model via 'lme4' with optional fixed covariates, and (2) AST kernel-smoothing of residuals across space, time, and age dimensions. Uncertainty is quantified via bootstrap. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations.
+Bayesian alternatives (experimental): \code{\link[=dmft_fit_bayes]{dmft_fit_bayes()}},
+\code{\link[=dmft_predict_bayes]{dmft_predict_bayes()}}, \code{\link[=dmft_diagnose_bayes]{dmft_diagnose_bayes()}}, \code{\link[=dmft_project_bayes]{dmft_project_bayes()}}.
+}
+\references{
+Shoaee S, et al. (2022). Subnational estimation of dental caries burden.
+\emph{BMC Oral Health}, 22:634.
+
+Shoaee S, et al. (2025). Subnational estimation using AST models.
+\emph{BMC Oral Health}, 25:1490.
 }
 \seealso{
 Useful links:

@@ -9,6 +9,7 @@ dmft_run(
   shapefile_path,
   config,
   dentition = c("both", "deciduous", "permanent"),
+  backend = c("frequentist", "bayesian"),
   region_name_col = NULL,
   skip_projections = FALSE
 )
@@ -22,6 +23,10 @@ dmft_run(
 
 \item{dentition}{Which dentition(s) to model: \code{"both"}, \code{"deciduous"},
 or \code{"permanent"}.}
+
+\item{backend}{Modeling backend: \code{"frequentist"} (default, lme4) or
+\code{"bayesian"} (experimental, cmdstanr). The Bayesian backend requires
+cmdstanr, posterior, and loo to be installed.}
 
 \item{region_name_col}{Column in the shapefile containing region names.}
 

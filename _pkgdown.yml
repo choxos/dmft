@@ -3,6 +3,21 @@ url: https://choxos.github.io/dmft/
 template:
   bootstrap: 5
 
+navbar:
+  structure:
+    left:  [intro, reference, articles]
+    right: [search, github]
+  components:
+    articles:
+      text: Tutorial
+      href: articles/tutorial.html
+
+articles:
+  - title: Getting Started
+    navbar: ~
+    contents:
+      - tutorial
+
 reference:
   - title: Configuration
     desc: Set up your analysis
@@ -22,17 +37,26 @@ reference:
     contents:
       - dmft_adjacency
 
-  - title: Model Fitting
-    desc: Bayesian hierarchical models
+  - title: "Model Fitting (Frequentist)"
+    desc: "lme4 mixed-effects models (default)"
     contents:
       - dmft_fit
       - dmft_predict
       - dmft_diagnose
+      - dmft_ast
+
+  - title: "Model Fitting (Bayesian)"
+    desc: "Experimental Stan/cmdstanr backend"
+    contents:
+      - dmft_fit_bayes
+      - dmft_predict_bayes
+      - dmft_diagnose_bayes
 
   - title: Projections
     desc: Future trend scenarios
     contents:
       - dmft_project
+      - dmft_project_bayes
 
   - title: Visualization
     desc: Maps and trend plots
@@ -46,8 +70,3 @@ reference:
     contents:
       - dmft_run
       - dmft_phantom
-
-  - title: Utilities
-    desc: Helper functions
-    contents:
-      - compute_bym2_scaling_factor
