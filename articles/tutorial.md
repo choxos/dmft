@@ -232,7 +232,7 @@ fit <- dmft_fit(
 )
 #> ℹ Model data: 2142 obs, 5 regions, years 2000-2020
 #> ℹ Fitting lme4 model (permanent): y ~ 1 + (1 | region_std) + (1 | year_factor)
-#> ✔ lme4 fit complete in 0.9s (AIC=14788.8, BIC=14811.4)
+#> ✔ lme4 fit complete in 1s (AIC=14788.8, BIC=14811.4)
 ```
 
 The model formula is:
