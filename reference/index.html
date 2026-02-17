@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">dmft</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -16,6 +16,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/tutorial.html">Tutorial</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
 <li class="nav-item"><a class="external-link nav-link" href="https://github.com/choxos/dmft/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
@@ -99,9 +100,9 @@
         </dt>
         <dd>Create spatial adjacency structure from a shapefile</dd>
       </dl></div><div class="section level2">
-      <h2 id="model-fitting">Model Fitting<a class="anchor" aria-label="anchor" href="#model-fitting"></a></h2>
+      <h2 id="model-fitting-frequentist-">Model Fitting (Frequentist)<a class="anchor" aria-label="anchor" href="#model-fitting-frequentist-"></a></h2>
 
-      <div class="section-desc"><p>Bayesian hierarchical models</p></div>
+      <div class="section-desc"><p>lme4 mixed-effects models (default)</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -113,14 +114,14 @@
           <code><a href="dmft_fit.html">dmft_fit()</a></code>
 
         </dt>
-        <dd>Fit a Bayesian hierarchical model for DMFT/dmft</dd>
+        <dd>Fit a random intercept mixed-effects model for DMFT/dmft</dd>
 
         <dt>
 
           <code><a href="dmft_predict.html">dmft_predict()</a></code>
 
         </dt>
-        <dd>Generate predictions from a fitted DMFT model</dd>
+        <dd>Generate predictions from a fitted DMFT model with AST smoothing</dd>
 
         <dt>
 
@@ -128,6 +129,43 @@
 
         </dt>
         <dd>Run model diagnostics</dd>
+
+        <dt>
+
+          <code><a href="dmft_ast.html">dmft_ast()</a></code>
+
+        </dt>
+        <dd>Apply AST (Age-Spatial-Temporal) smoothing to model residuals</dd>
+      </dl></div><div class="section level2">
+      <h2 id="model-fitting-bayesian-">Model Fitting (Bayesian)<a class="anchor" aria-label="anchor" href="#model-fitting-bayesian-"></a></h2>
+
+      <div class="section-desc"><p>Experimental Stan/cmdstanr backend</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="dmft_fit_bayes.html">dmft_fit_bayes()</a></code>
+
+        </dt>
+        <dd>Fit a Bayesian random intercept model for DMFT/dmft via cmdstanr</dd>
+
+        <dt>
+
+          <code><a href="dmft_predict_bayes.html">dmft_predict_bayes()</a></code>
+
+        </dt>
+        <dd>Generate predictions from a Bayesian DMFT model with AST smoothing</dd>
+
+        <dt>
+
+          <code><a href="dmft_diagnose_bayes.html">dmft_diagnose_bayes()</a></code>
+
+        </dt>
+        <dd>Run Bayesian model diagnostics</dd>
       </dl></div><div class="section level2">
       <h2 id="projections">Projections<a class="anchor" aria-label="anchor" href="#projections"></a></h2>
 
@@ -144,6 +182,13 @@
 
         </dt>
         <dd>Project DMFT trends into the future</dd>
+
+        <dt>
+
+          <code><a href="dmft_project_bayes.html">dmft_project_bayes()</a></code>
+
+        </dt>
+        <dd>Project DMFT trends using Bayesian posterior draws</dd>
       </dl></div><div class="section level2">
       <h2 id="visualization">Visualization<a class="anchor" aria-label="anchor" href="#visualization"></a></h2>
 
@@ -197,22 +242,6 @@
 
         </dt>
         <dd>Generate synthetic (phantom) DMFT data for testing</dd>
-      </dl></div><div class="section level2">
-      <h2 id="utilities">Utilities<a class="anchor" aria-label="anchor" href="#utilities"></a></h2>
-
-      <div class="section-desc"><p>Helper functions</p></div>
-
-      <dl></dl></div><div class="section level2">
-
-
-
-
-      <dl><dt>
-
-          <code><a href="compute_bym2_scaling_factor.html">compute_bym2_scaling_factor()</a></code>
-
-        </dt>
-        <dd>Compute BYM2 scaling factor from ICAR precision matrix</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

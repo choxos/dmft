@@ -1,6 +1,6 @@
 # Create spatial adjacency structure from a shapefile
 
-Builds the neighbourhood graph needed for BYM2 spatial random effects.
+Builds the neighbourhood graph needed for the AST spatial weighting.
 Uses Queen contiguity (shared boundary or vertex). Isolated regions
 (islands) are connected to their nearest neighbour.
 
@@ -54,13 +54,9 @@ A list with elements:
 
   The `sf` object (reordered to match config).
 
-- graph_path:
+- location_ids:
 
-  Path to the INLA graph file (temp file).
-
-- node1, node2:
-
-  Edge list for Stan / BYM2 scaling.
+  Named integer vector mapping region names to numeric IDs.
 
 ## Examples
 

@@ -1,19 +1,23 @@
 # dmft
 
-**dmft** implements GBD-style Bayesian hierarchical models for
-estimating and projecting dental caries burden (DMFT/dmft indices) at
-subnational level for any country.
+**dmft** implements the Age-Spatial-Temporal (AST) model for estimating
+and projecting dental caries burden (DMFT/dmft indices) at subnational
+level for any country.
 
-**Documentation**: <https://choxos.github.io/dmft/>
+**Documentation & Tutorial**: <https://choxos.github.io/dmft/>
 
 ## Features
 
-- **Bayesian spatial-temporal-age modeling** with BYM2 spatial effects,
-  RW2 temporal trends, and RW1 age effects
-- **Two inference backends**: INLA (fast approximate Bayesian) and Stan
-  (full MCMC via cmdstanr)
-- **Gaussian meta-regression** with inverse-variance weighting for
-  study-level summary data
+- **Two-stage AST modeling**: mixed-effects model + kernel-smoothed
+  residuals across age, space, and time
+- **Two backends**: frequentist (lme4, default) and Bayesian (cmdstanr,
+  experimental)
+- **Spatial smoothing** via adjacency-based weight matrices from
+  shapefiles
+- **Temporal smoothing** using LOESS-inspired cubic power weights
+- **Age smoothing** with exponential decay kernels
+- **Uncertainty quantification**: bootstrap (frequentist) or posterior
+  credible intervals (Bayesian)
 - **Projection framework** with reference, optimistic, and pessimistic
   scenarios
 - **Publication-ready visualizations**: choropleth maps, temporal
@@ -30,22 +34,10 @@ pak::pak("choxos/dmft")
 remotes::install_github("choxos/dmft")
 ```
 
-### Optional backends
-
-The INLA backend (default) requires the INLA package:
+For the experimental Bayesian backend, also install cmdstanr:
 
 ``` r
-install.packages("INLA",
-  repos = c(CRAN = "https://cloud.r-project.org",
-            INLA = "https://inla.r-inla-download.org/R/stable"))
-```
-
-The Stan backend requires cmdstanr:
-
-``` r
-install.packages("cmdstanr",
-  repos = c("https://stan-dev.r-universe.dev",
-            "https://cloud.r-project.org"))
+install.packages("cmdstanr", repos = c("https://stan-dev.r-universe.dev", getOption("repos")))
 cmdstanr::install_cmdstan()
 ```
 
@@ -74,7 +66,11 @@ dmft_plot_map(results$estimates$permanent, results$adjacency$sf, year = 2020)
 dmft_plot_trends(results$estimates$permanent, results$projections$permanent)
 ```
 
-### Step-by-step usage
+See the [full
+tutorial](https://choxos.github.io/dmft/articles/tutorial.html) for a
+complete walkthrough.
+
+### Step-by-Step Usage
 
 ``` r
 # Load and clean data
@@ -84,15 +80,33 @@ clean <- dmft_clean(raw, config = cfg)
 # Create spatial structure
 adj <- dmft_adjacency(shapefile_path = "regions.shp", config = cfg)
 
-# Fit model
+# Fit mixed-effects model (frequentist)
 fit <- dmft_fit(clean$permanent, adj, dentition = "permanent", config = cfg)
 
-# Predict and diagnose
-estimates <- dmft_predict(fit, config = cfg)
+# AST smoothing + bootstrap uncertainty
+estimates <- dmft_predict(fit, adj, config = cfg)
+
+# Diagnostics
 diagnostics <- dmft_diagnose(fit, config = cfg)
 
 # Project future trends
 projections <- dmft_project(fit, estimates, config = cfg)
+```
+
+### Bayesian Backend (Experimental)
+
+``` r
+# Fit with Stan instead of lme4
+fit_b <- dmft_fit_bayes(clean$permanent, adj, dentition = "permanent", config = cfg)
+
+# Predictions with posterior credible intervals
+estimates_b <- dmft_predict_bayes(fit_b, adj, config = cfg)
+
+# Bayesian diagnostics (Rhat, ESS, LOO-CV)
+diag_b <- dmft_diagnose_bayes(fit_b, config = cfg)
+
+# Or run the full pipeline with backend = "bayesian"
+results <- dmft_run("data.csv", "regions.shp", config = cfg, backend = "bayesian")
 ```
 
 ## Input Data Format
@@ -112,16 +126,40 @@ minimum:
 
 ## Model
 
-The package fits a Bayesian hierarchical model:
+The package uses a two-stage AST (Age-Spatial-Temporal) approach
+following Shoaee et al. (2022, 2025):
 
-    y_i ~ Normal(mu_i, se_i^2)    [Gaussian meta-regression]
+**Stage 1 — Mixed-effects model**
 
-    mu_i = beta_0 + S_region + T_year + A_age + G_sex + interactions
+    y_i ~ Normal(mu_i, sigma^2 + se_i^2)
 
-    S ~ BYM2(rho, sigma_spatial)   [spatial: ICAR + IID mixture]
-    T ~ RW2(sigma_temporal)        [temporal: second-order random walk]
-    A ~ RW1(sigma_age)             [age: first-order random walk]
-    G ~ IID(sigma_sex)             [sex: exchangeable]
+    mu_i = beta_0 + [covariates] + b_region + b_year
+
+    b_region ~ Normal(0, sigma_region^2)   [random intercepts]
+    b_year   ~ Normal(0, sigma_year^2)     [random intercepts]
+
+The frequentist backend estimates parameters via REML (lme4). The
+Bayesian backend uses HMC/NUTS sampling (Stan) with weakly informative
+priors.
+
+**Stage 2 — AST kernel smoothing of residuals**
+
+Residuals from Stage 1 are smoothed using weighted averaging across
+three dimensions:
+
+- **Spatial**: adjacency-based weights (par_space = 0.9)
+- **Temporal**: LOESS cubic power decay (par_time = 2)
+- **Age**: exponential decay (par_age = 1)
+
+The combined weight matrix is the Kronecker product of these three
+weight matrices, row-normalized to sum to 1.
+
+## References
+
+- Shoaee S, et al. (2022). Subnational estimation of dental caries
+  burden. *BMC Oral Health*, 22:634.
+- Shoaee S, et al. (2025). Subnational estimation using AST models. *BMC
+  Oral Health*, 25:1490.
 
 ## License
 
@@ -156,16 +194,29 @@ Build adjacency for spatial modeling
 - [`dmft_adjacency()`](https://choxos.github.io/dmft/reference/dmft_adjacency.md)
   : Create spatial adjacency structure from a shapefile
 
-## Model Fitting
+## Model Fitting (Frequentist)
 
-Bayesian hierarchical models
+lme4 mixed-effects models (default)
 
 - [`dmft_fit()`](https://choxos.github.io/dmft/reference/dmft_fit.md) :
-  Fit a Bayesian hierarchical model for DMFT/dmft
+  Fit a random intercept mixed-effects model for DMFT/dmft
 - [`dmft_predict()`](https://choxos.github.io/dmft/reference/dmft_predict.md)
-  : Generate predictions from a fitted DMFT model
+  : Generate predictions from a fitted DMFT model with AST smoothing
 - [`dmft_diagnose()`](https://choxos.github.io/dmft/reference/dmft_diagnose.md)
   : Run model diagnostics
+- [`dmft_ast()`](https://choxos.github.io/dmft/reference/dmft_ast.md) :
+  Apply AST (Age-Spatial-Temporal) smoothing to model residuals
+
+## Model Fitting (Bayesian)
+
+Experimental Stan/cmdstanr backend
+
+- [`dmft_fit_bayes()`](https://choxos.github.io/dmft/reference/dmft_fit_bayes.md)
+  : Fit a Bayesian random intercept model for DMFT/dmft via cmdstanr
+- [`dmft_predict_bayes()`](https://choxos.github.io/dmft/reference/dmft_predict_bayes.md)
+  : Generate predictions from a Bayesian DMFT model with AST smoothing
+- [`dmft_diagnose_bayes()`](https://choxos.github.io/dmft/reference/dmft_diagnose_bayes.md)
+  : Run Bayesian model diagnostics
 
 ## Projections
 
@@ -173,6 +224,8 @@ Future trend scenarios
 
 - [`dmft_project()`](https://choxos.github.io/dmft/reference/dmft_project.md)
   : Project DMFT trends into the future
+- [`dmft_project_bayes()`](https://choxos.github.io/dmft/reference/dmft_project_bayes.md)
+  : Project DMFT trends using Bayesian posterior draws
 
 ## Visualization
 
@@ -194,10 +247,9 @@ Full analysis workflow
 - [`dmft_phantom()`](https://choxos.github.io/dmft/reference/dmft_phantom.md)
   : Generate synthetic (phantom) DMFT data for testing
 
-## Utilities
+# Articles
 
-Helper functions
+### Getting Started
 
-- [`compute_bym2_scaling_factor()`](https://choxos.github.io/dmft/reference/compute_bym2_scaling_factor.md)
-  : Compute BYM2 scaling factor from ICAR precision matrix
-
+- [Getting Started with
+  dmft](https://choxos.github.io/dmft/articles/tutorial.md):

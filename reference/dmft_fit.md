@@ -1,20 +1,15 @@
-# Fit a Bayesian hierarchical model for DMFT/dmft
+# Fit a random intercept mixed-effects model for DMFT/dmft
 
-Implements a GBD-style spatial-temporal-age model with BYM2 spatial
-random effects, RW2 temporal trends, RW1 age effects, and IID sex
-effects. Uses Gaussian meta-regression (identity link) by default.
+Stage 1 of the AST methodology: fits a random intercept mixed-effects
+model via [`lme4::lmer()`](https://rdrr.io/pkg/lme4/man/lmer.html) with
+optional fixed covariates and random province/year intercepts.
+Inverse-variance weighting is applied when standard errors are
+available.
 
 ## Usage
 
 ``` r
-dmft_fit(
-  data,
-  adjacency,
-  dentition = c("deciduous", "permanent"),
-  config,
-  family = "gaussian",
-  include_interactions = TRUE
-)
+dmft_fit(data, adjacency, dentition = c("deciduous", "permanent"), config)
 ```
 
 ## Arguments
@@ -39,16 +34,6 @@ dmft_fit(
   [dmft_config](https://choxos.github.io/dmft/reference/dmft_config.md)
   object.
 
-- family:
-
-  Likelihood family: `"gaussian"` (default, meta-regression) or
-  `"nbinomial"`.
-
-- include_interactions:
-
-  Logical; include space-time, space-age, and time-age IID interaction
-  random effects.
-
 ## Value
 
-A fitted model object (INLA or wrapped cmdstanr fit).
+A fitted lme4 model object with metadata attributes.

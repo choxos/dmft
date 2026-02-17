@@ -10,14 +10,14 @@
 Source:
 [`DESCRIPTION`](https://github.com/choxos/dmft/blob/main/DESCRIPTION)
 
-Sofi-Mahmudi A (2026). *dmft: Bayesian Hierarchical Modeling of Dental
-Caries (DMFT/dmft)*. R package version 0.1.0,
+Sofi-Mahmudi A (2026). *dmft: Age-Spatial-Temporal Modeling of Dental
+Caries (DMFT/dmft)*. R package version 0.2.0,
 <https://github.com/choxos/dmft>.
 
     @Manual{,
-      title = {dmft: Bayesian Hierarchical Modeling of Dental Caries (DMFT/dmft)},
+      title = {dmft: Age-Spatial-Temporal Modeling of Dental Caries (DMFT/dmft)},
       author = {Ahmad Sofi-Mahmudi},
       year = {2026},
-      note = {R package version 0.1.0},
+      note = {R package version 0.2.0},
       url = {https://github.com/choxos/dmft},
     }

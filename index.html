@@ -5,14 +5,14 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Bayesian Hierarchical Modeling of Dental Caries (DMFT/dmft) • dmft</title>
+<title>Age-Spatial-Temporal Modeling of Dental Caries (DMFT/dmft) • dmft</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Bayesian Hierarchical Modeling of Dental Caries (DMFT/dmft)">
-<meta name="description" content="Implements GBD-style Bayesian hierarchical models for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level. Combines BYM2 spatial random effects, RW2 temporal trends, and RW1 age effects with Gaussian meta-regression. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations. Two inference backends are supported: INLA (fast approximate Bayesian) and Stan (full MCMC).">
-<meta property="og:description" content="Implements GBD-style Bayesian hierarchical models for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level. Combines BYM2 spatial random effects, RW2 temporal trends, and RW1 age effects with Gaussian meta-regression. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations. Two inference backends are supported: INLA (fast approximate Bayesian) and Stan (full MCMC).">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Age-Spatial-Temporal Modeling of Dental Caries (DMFT/dmft)">
+<meta name="description" content="Implements Age-Spatial-Temporal (AST) models for estimating dental caries burden (DMFT/dmft indices) at subnational level. Uses a two-stage approach: (1) random intercept mixed-effects model via lme4 with optional fixed covariates, and (2) AST kernel-smoothing of residuals across space, time, and age dimensions. Uncertainty is quantified via bootstrap. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations.">
+<meta property="og:description" content="Implements Age-Spatial-Temporal (AST) models for estimating dental caries burden (DMFT/dmft indices) at subnational level. Uses a two-stage approach: (1) random intercept mixed-effects model via lme4 with optional fixed covariates, and (2) AST kernel-smoothing of residuals across space, time, and age dimensions. Uncertainty is quantified via bootstrap. Supports any country given study-level data and a regional shapefile. Provides a complete pipeline from data cleaning through model fitting, diagnostics, projections, and publication-ready visualizations.">
 <meta property="og:image" content="https://choxos.github.io/dmft/logo.png">
 </head>
 <body>
@@ -23,7 +23,7 @@
 
     <a class="navbar-brand me-2" href="index.html">dmft</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,6 +33,7 @@
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="articles/tutorial.html">Tutorial</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -53,18 +54,24 @@
 </div>
 <!-- badges: start -->
 
-<p><strong>dmft</strong> implements GBD-style Bayesian hierarchical models for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level for any country.</p>
-<p><strong>Documentation</strong>: <a href="https://choxos.github.io/dmft/" class="uri">https://choxos.github.io/dmft/</a></p>
+<p><strong>dmft</strong> implements the Age-Spatial-Temporal (AST) model for estimating and projecting dental caries burden (DMFT/dmft indices) at subnational level for any country.</p>
+<p><strong>Documentation &amp; Tutorial</strong>: <a href="https://choxos.github.io/dmft/" class="uri">https://choxos.github.io/dmft/</a></p>
 <div class="section level2">
 <h2 id="features">Features<a class="anchor" aria-label="anchor" href="#features"></a>
 </h2>
 <ul>
 <li>
-<strong>Bayesian spatial-temporal-age modeling</strong> with BYM2 spatial effects, RW2 temporal trends, and RW1 age effects</li>
+<strong>Two-stage AST modeling</strong>: mixed-effects model + kernel-smoothed residuals across age, space, and time</li>
 <li>
-<strong>Two inference backends</strong>: INLA (fast approximate Bayesian) and Stan (full MCMC via cmdstanr)</li>
+<strong>Two backends</strong>: frequentist (lme4, default) and Bayesian (cmdstanr, experimental)</li>
 <li>
-<strong>Gaussian meta-regression</strong> with inverse-variance weighting for study-level summary data</li>
+<strong>Spatial smoothing</strong> via adjacency-based weight matrices from shapefiles</li>
+<li>
+<strong>Temporal smoothing</strong> using LOESS-inspired cubic power weights</li>
+<li>
+<strong>Age smoothing</strong> with exponential decay kernels</li>
+<li>
+<strong>Uncertainty quantification</strong>: bootstrap (frequentist) or posterior credible intervals (Bayesian)</li>
 <li>
 <strong>Projection framework</strong> with reference, optimistic, and pessimistic scenarios</li>
 <li>
@@ -82,26 +89,15 @@
 <span></span>
 <span><span class="co"># Or with remotes</span></span>
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"choxos/dmft"</span><span class="op">)</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="optional-backends">Optional backends<a class="anchor" aria-label="anchor" href="#optional-backends"></a>
-</h3>
-<p>The INLA backend (default) requires the INLA package:</p>
+<p>For the experimental Bayesian backend, also install cmdstanr:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"INLA"</span>,</span>
-<span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>CRAN <span class="op">=</span> <span class="st">"https://cloud.r-project.org"</span>,</span>
-<span>            INLA <span class="op">=</span> <span class="st">"https://inla.r-inla-download.org/R/stable"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p>The Stan backend requires cmdstanr:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"cmdstanr"</span>,</span>
-<span>  repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"https://stan-dev.r-universe.dev"</span>,</span>
-<span>            <span class="st">"https://cloud.r-project.org"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"cmdstanr"</span>, repos <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"https://stan-dev.r-universe.dev"</span>, <span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">getOption</a></span><span class="op">(</span><span class="st">"repos"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu">cmdstanr</span><span class="fu">::</span><span class="fu">install_cmdstan</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-</div>
 </div>
 <div class="section level2">
 <h2 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/choxos/dmft" class="external-link">dmft</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># 1. Configure the analysis for your country</span></span>
@@ -122,10 +118,11 @@
 <span><span class="co"># 3. Visualize</span></span>
 <span><span class="fu"><a href="reference/dmft_plot_map.html">dmft_plot_map</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">estimates</span><span class="op">$</span><span class="va">permanent</span>, <span class="va">results</span><span class="op">$</span><span class="va">adjacency</span><span class="op">$</span><span class="va">sf</span>, year <span class="op">=</span> <span class="fl">2020</span><span class="op">)</span></span>
 <span><span class="fu"><a href="reference/dmft_plot_trends.html">dmft_plot_trends</a></span><span class="op">(</span><span class="va">results</span><span class="op">$</span><span class="va">estimates</span><span class="op">$</span><span class="va">permanent</span>, <span class="va">results</span><span class="op">$</span><span class="va">projections</span><span class="op">$</span><span class="va">permanent</span><span class="op">)</span></span></code></pre></div>
+<p>See the <a href="https://choxos.github.io/dmft/articles/tutorial.html">full tutorial</a> for a complete walkthrough.</p>
 <div class="section level3">
-<h3 id="step-by-step-usage">Step-by-step usage<a class="anchor" aria-label="anchor" href="#step-by-step-usage"></a>
+<h3 id="step-by-step-usage">Step-by-Step Usage<a class="anchor" aria-label="anchor" href="#step-by-step-usage"></a>
 </h3>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Load and clean data</span></span>
 <span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_load.html">dmft_load</a></span><span class="op">(</span><span class="st">"data.csv"</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
 <span><span class="va">clean</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_clean.html">dmft_clean</a></span><span class="op">(</span><span class="va">raw</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
@@ -133,15 +130,33 @@
 <span><span class="co"># Create spatial structure</span></span>
 <span><span class="va">adj</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_adjacency.html">dmft_adjacency</a></span><span class="op">(</span>shapefile_path <span class="op">=</span> <span class="st">"regions.shp"</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Fit model</span></span>
+<span><span class="co"># Fit mixed-effects model (frequentist)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_fit.html">dmft_fit</a></span><span class="op">(</span><span class="va">clean</span><span class="op">$</span><span class="va">permanent</span>, <span class="va">adj</span>, dentition <span class="op">=</span> <span class="st">"permanent"</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Predict and diagnose</span></span>
-<span><span class="va">estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_predict.html">dmft_predict</a></span><span class="op">(</span><span class="va">fit</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
+<span><span class="co"># AST smoothing + bootstrap uncertainty</span></span>
+<span><span class="va">estimates</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_predict.html">dmft_predict</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">adj</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Diagnostics</span></span>
 <span><span class="va">diagnostics</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_diagnose.html">dmft_diagnose</a></span><span class="op">(</span><span class="va">fit</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Project future trends</span></span>
 <span><span class="va">projections</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_project.html">dmft_project</a></span><span class="op">(</span><span class="va">fit</span>, <span class="va">estimates</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="bayesian-backend-experimental">Bayesian Backend (Experimental)<a class="anchor" aria-label="anchor" href="#bayesian-backend-experimental"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Fit with Stan instead of lme4</span></span>
+<span><span class="va">fit_b</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_fit_bayes.html">dmft_fit_bayes</a></span><span class="op">(</span><span class="va">clean</span><span class="op">$</span><span class="va">permanent</span>, <span class="va">adj</span>, dentition <span class="op">=</span> <span class="st">"permanent"</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Predictions with posterior credible intervals</span></span>
+<span><span class="va">estimates_b</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_predict_bayes.html">dmft_predict_bayes</a></span><span class="op">(</span><span class="va">fit_b</span>, <span class="va">adj</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Bayesian diagnostics (Rhat, ESS, LOO-CV)</span></span>
+<span><span class="va">diag_b</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_diagnose_bayes.html">dmft_diagnose_bayes</a></span><span class="op">(</span><span class="va">fit_b</span>, config <span class="op">=</span> <span class="va">cfg</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or run the full pipeline with backend = "bayesian"</span></span>
+<span><span class="va">results</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dmft_run.html">dmft_run</a></span><span class="op">(</span><span class="st">"data.csv"</span>, <span class="st">"regions.shp"</span>, config <span class="op">=</span> <span class="va">cfg</span>, backend <span class="op">=</span> <span class="st">"bayesian"</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2">
@@ -197,15 +212,34 @@
 <div class="section level2">
 <h2 id="model">Model<a class="anchor" aria-label="anchor" href="#model"></a>
 </h2>
-<p>The package fits a Bayesian hierarchical model:</p>
-<pre><code>y_i ~ Normal(mu_i, se_i^2)    [Gaussian meta-regression]
+<p>The package uses a two-stage AST (Age-Spatial-Temporal) approach following Shoaee et al. (2022, 2025):</p>
+<p><strong>Stage 1 — Mixed-effects model</strong></p>
+<pre><code>y_i ~ Normal(mu_i, sigma^2 + se_i^2)
 
-mu_i = beta_0 + S_region + T_year + A_age + G_sex + interactions
+mu_i = beta_0 + [covariates] + b_region + b_year
 
-S ~ BYM2(rho, sigma_spatial)   [spatial: ICAR + IID mixture]
-T ~ RW2(sigma_temporal)        [temporal: second-order random walk]
-A ~ RW1(sigma_age)             [age: first-order random walk]
-G ~ IID(sigma_sex)             [sex: exchangeable]</code></pre>
+b_region ~ Normal(0, sigma_region^2)   [random intercepts]
+b_year   ~ Normal(0, sigma_year^2)     [random intercepts]</code></pre>
+<p>The frequentist backend estimates parameters via REML (lme4). The Bayesian backend uses HMC/NUTS sampling (Stan) with weakly informative priors.</p>
+<p><strong>Stage 2 — AST kernel smoothing of residuals</strong></p>
+<p>Residuals from Stage 1 are smoothed using weighted averaging across three dimensions:</p>
+<ul>
+<li>
+<strong>Spatial</strong>: adjacency-based weights (par_space = 0.9)</li>
+<li>
+<strong>Temporal</strong>: LOESS cubic power decay (par_time = 2)</li>
+<li>
+<strong>Age</strong>: exponential decay (par_age = 1)</li>
+</ul>
+<p>The combined weight matrix is the Kronecker product of these three weight matrices, row-normalized to sum to 1.</p>
+</div>
+<div class="section level2">
+<h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>
+</h2>
+<ul>
+<li>Shoaee S, et al. (2022). Subnational estimation of dental caries burden. <em>BMC Oral Health</em>, 22:634.</li>
+<li>Shoaee S, et al. (2025). Subnational estimation using AST models. <em>BMC Oral Health</em>, 25:1490.</li>
+</ul>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>

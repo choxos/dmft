@@ -1,7 +1,7 @@
 # Create a DMFT analysis configuration
 
 Defines all parameters for a DMFT/dmft analysis: regions, time period,
-age groups, model priors, and projection settings.
+age groups, AST smoothing parameters, and projection settings.
 
 ## Usage
 
@@ -17,13 +17,12 @@ dmft_config(
   dmft_max_deciduous = 20L,
   dmft_max_permanent = 28L,
   cv_default = 0.3,
-  backend = c("inla", "cmdstanr"),
+  covariates = NULL,
+  ast_params = list(par_space = 0.9, par_time = 2, par_age = 1, weight_coverage = 0.9),
+  n_boot = 1000L,
+  stan_settings = NULL,
   seed = 12345L,
-  n_draws = 250L,
-  n_cores = max(1L, parallel::detectCores() - 1L),
-  region_mapping = NULL,
-  stan_settings = list(chains = 4, parallel_chains = 4, iter_warmup = 1000, iter_sampling
-    = 1000, adapt_delta = 0.95, max_treedepth = 12)
+  region_mapping = NULL
 )
 ```
 
@@ -66,31 +65,51 @@ dmft_config(
 
   Default coefficient of variation for uncertainty imputation.
 
-- backend:
+- covariates:
 
-  Inference backend: `"inla"` or `"cmdstanr"`.
+  Character vector of covariate column names to include as fixed effects
+  in the mixed model. If `NULL`, only the intercept is used.
+
+- ast_params:
+
+  Named list of AST smoothing parameters:
+
+  par_space
+
+  :   Spatial correlation parameter (default 0.9).
+
+  par_time
+
+  :   Temporal smoothing parameter, lambda (default 2).
+
+  par_age
+
+  :   Age smoothing parameter, omega (default 1).
+
+  weight_coverage
+
+  :   Weight for high-coverage data sources (default 0.9).
+
+- n_boot:
+
+  Number of bootstrap replicates for uncertainty intervals.
+
+- stan_settings:
+
+  Optional named list of Stan sampling settings for the experimental
+  Bayesian backend (see
+  [`dmft_fit_bayes()`](https://choxos.github.io/dmft/reference/dmft_fit_bayes.md)).
+  Elements: `chains`, `iter_warmup`, `iter_sampling`, `adapt_delta`,
+  `max_treedepth`. If `NULL`, sensible defaults are used.
 
 - seed:
 
   Random seed for reproducibility.
 
-- n_draws:
-
-  Number of posterior draws.
-
-- n_cores:
-
-  Number of CPU cores.
-
 - region_mapping:
 
   Optional named list mapping alternative region names to canonical
   names in `regions`.
-
-- stan_settings:
-
-  Named list of Stan MCMC settings. Only used when
-  `backend = "cmdstanr"`.
 
 ## Value
 
@@ -109,6 +128,8 @@ cfg
 #>   Regions:      3 (Region_A, Region_B, Region_C, ...)
 #>   Historical:   2000-2020 (21 years)
 #>   Age groups:   deciduous=3, permanent=12
-#>   Backend:      inla
+#>   AST params:   space=0.9, time=2, age=1
+#>   Covariates:   none
+#>   Bootstrap:    1000 replicates
 #>   Seed:         12345
 ```

@@ -1,8 +1,8 @@
 # Project DMFT trends into the future
 
 Extracts the temporal trend from a fitted model and generates three
-scenarios (reference, optimistic, pessimistic) using damped RW2
-extrapolation with bounded uncertainty growth.
+scenarios (reference, optimistic, pessimistic) using linear trend
+extrapolation with optional damping and bounded uncertainty.
 
 ## Usage
 

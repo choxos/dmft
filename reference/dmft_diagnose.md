@@ -1,8 +1,8 @@
 # Run model diagnostics
 
-Computes fit statistics (DIC, WAIC), residual diagnostics (RMSE, MAE),
-spatial autocorrelation of residuals (Moran's I), and prediction
-validity checks.
+Computes fit statistics (AIC, BIC), residual diagnostics (RMSE, MAE),
+spatial autocorrelation of residuals (Moran's I), and variance
+components.
 
 ## Usage
 
@@ -25,4 +25,5 @@ dmft_diagnose(fit, config)
 
 ## Value
 
-A list with elements: `fit_stats`, `residuals`, `spatial`, `validity`.
+A list with elements: `fit_stats`, `residuals`, `spatial`,
+`variance_components`, `validity`.

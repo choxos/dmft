@@ -1,8 +1,8 @@
 # Run the full DMFT analysis pipeline
 
 Orchestrates the complete workflow: data loading, cleaning, spatial
-structure, model fitting, prediction, diagnostics, and optional
-projections.
+structure, mixed-effects model fitting, AST smoothing, bootstrap
+uncertainty, diagnostics, and optional projections.
 
 ## Usage
 
@@ -12,6 +12,7 @@ dmft_run(
   shapefile_path,
   config,
   dentition = c("both", "deciduous", "permanent"),
+  backend = c("frequentist", "bayesian"),
   region_name_col = NULL,
   skip_projections = FALSE
 )
@@ -37,6 +38,12 @@ dmft_run(
 
   Which dentition(s) to model: `"both"`, `"deciduous"`, or
   `"permanent"`.
+
+- backend:
+
+  Modeling backend: `"frequentist"` (default, lme4) or `"bayesian"`
+  (experimental, cmdstanr). The Bayesian backend requires cmdstanr,
+  posterior, and loo to be installed.
 
 - region_name_col:
 

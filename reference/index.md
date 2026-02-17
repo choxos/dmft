@@ -27,16 +27,29 @@ Build adjacency for spatial modeling
 - [`dmft_adjacency()`](https://choxos.github.io/dmft/reference/dmft_adjacency.md)
   : Create spatial adjacency structure from a shapefile
 
-## Model Fitting
+## Model Fitting (Frequentist)
 
-Bayesian hierarchical models
+lme4 mixed-effects models (default)
 
 - [`dmft_fit()`](https://choxos.github.io/dmft/reference/dmft_fit.md) :
-  Fit a Bayesian hierarchical model for DMFT/dmft
+  Fit a random intercept mixed-effects model for DMFT/dmft
 - [`dmft_predict()`](https://choxos.github.io/dmft/reference/dmft_predict.md)
-  : Generate predictions from a fitted DMFT model
+  : Generate predictions from a fitted DMFT model with AST smoothing
 - [`dmft_diagnose()`](https://choxos.github.io/dmft/reference/dmft_diagnose.md)
   : Run model diagnostics
+- [`dmft_ast()`](https://choxos.github.io/dmft/reference/dmft_ast.md) :
+  Apply AST (Age-Spatial-Temporal) smoothing to model residuals
+
+## Model Fitting (Bayesian)
+
+Experimental Stan/cmdstanr backend
+
+- [`dmft_fit_bayes()`](https://choxos.github.io/dmft/reference/dmft_fit_bayes.md)
+  : Fit a Bayesian random intercept model for DMFT/dmft via cmdstanr
+- [`dmft_predict_bayes()`](https://choxos.github.io/dmft/reference/dmft_predict_bayes.md)
+  : Generate predictions from a Bayesian DMFT model with AST smoothing
+- [`dmft_diagnose_bayes()`](https://choxos.github.io/dmft/reference/dmft_diagnose_bayes.md)
+  : Run Bayesian model diagnostics
 
 ## Projections
 
@@ -44,6 +57,8 @@ Future trend scenarios
 
 - [`dmft_project()`](https://choxos.github.io/dmft/reference/dmft_project.md)
   : Project DMFT trends into the future
+- [`dmft_project_bayes()`](https://choxos.github.io/dmft/reference/dmft_project_bayes.md)
+  : Project DMFT trends using Bayesian posterior draws
 
 ## Visualization
 
@@ -64,10 +79,3 @@ Full analysis workflow
   Run the full DMFT analysis pipeline
 - [`dmft_phantom()`](https://choxos.github.io/dmft/reference/dmft_phantom.md)
   : Generate synthetic (phantom) DMFT data for testing
-
-## Utilities
-
-Helper functions
-
-- [`compute_bym2_scaling_factor()`](https://choxos.github.io/dmft/reference/compute_bym2_scaling_factor.md)
-  : Compute BYM2 scaling factor from ICAR precision matrix
