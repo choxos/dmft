@@ -31,5 +31,8 @@ utils::globalVariables(c(
   "value", "PRENAME", "region",
 
   # Diagnostic
-  "residual", "mean_resid"
+  "residual", "mean_resid",
+
+  # Bayesian-specific
+  "pred_bayes", "residual_bayes"
 ))

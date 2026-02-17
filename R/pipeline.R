@@ -9,6 +9,9 @@
 #' @param config A [dmft_config] object.
 #' @param dentition Which dentition(s) to model: `"both"`, `"deciduous"`,
 #'   or `"permanent"`.
+#' @param backend Modeling backend: `"frequentist"` (default, lme4) or
+#'   `"bayesian"` (experimental, cmdstanr). The Bayesian backend requires
+#'   cmdstanr, posterior, and loo to be installed.
 #' @param region_name_col Column in the shapefile containing region names.
 #' @param skip_projections Skip the projection step.
 #'
@@ -30,13 +33,20 @@ dmft_run <- function(data_path,
                       shapefile_path,
                       config,
                       dentition = c("both", "deciduous", "permanent"),
+                      backend = c("frequentist", "bayesian"),
                       region_name_col = NULL,
                       skip_projections = FALSE) {
 
   dentition <- match.arg(dentition)
+  backend   <- match.arg(backend)
   stopifnot(inherits(config, "dmft_config"))
 
-  cli_alert_info("Starting DMFT analysis pipeline (AST method)")
+  if (backend == "bayesian") {
+    check_suggests("cmdstanr")
+    check_suggests("posterior")
+  }
+
+  cli_alert_info("Starting DMFT analysis pipeline (AST method, backend={backend})")
 
   # 1. Load data
   raw_data <- dmft_load(data_path, config)
@@ -75,23 +85,44 @@ dmft_run <- function(data_path,
       next
     }
 
-    # Stage 1: Fit mixed-effects model
-    fit <- dmft_fit(d, adj, dentition = dent, config = config)
+    if (backend == "frequentist") {
+      # Stage 1: Fit mixed-effects model (lme4)
+      fit <- dmft_fit(d, adj, dentition = dent, config = config)
 
-    # Stage 2: AST smoothing + bootstrap uncertainty
-    est <- dmft_predict(fit, adj, config)
+      # Stage 2: AST smoothing + bootstrap uncertainty
+      est <- dmft_predict(fit, adj, config)
 
-    # Diagnostics
-    diag <- dmft_diagnose(fit, config)
+      # Diagnostics
+      diag <- dmft_diagnose(fit, config)
 
-    results$fits[[dent]]       <- fit
-    results$estimates[[dent]]  <- est
-    results$diagnostics[[dent]] <- diag
+      results$fits[[dent]]       <- fit
+      results$estimates[[dent]]  <- est
+      results$diagnostics[[dent]] <- diag
 
-    # 5. Projections
-    if (!skip_projections && !is.null(config$projection_start)) {
-      proj <- dmft_project(fit, est, config)
-      results$projections[[dent]] <- proj
+      # Projections
+      if (!skip_projections && !is.null(config$projection_start)) {
+        proj <- dmft_project(fit, est, config)
+        results$projections[[dent]] <- proj
+      }
+    } else {
+      # Bayesian backend (experimental)
+      fit <- dmft_fit_bayes(d, adj, dentition = dent, config = config)
+
+      # AST smoothing + posterior credible intervals
+      est <- dmft_predict_bayes(fit, adj, config)
+
+      # Bayesian diagnostics
+      diag <- dmft_diagnose_bayes(fit, config)
+
+      results$fits[[dent]]       <- fit
+      results$estimates[[dent]]  <- est
+      results$diagnostics[[dent]] <- diag
+
+      # Projections
+      if (!skip_projections && !is.null(config$projection_start)) {
+        proj <- dmft_project_bayes(fit, est, config)
+        results$projections[[dent]] <- proj
+      }
     }
   }
 

@@ -5,7 +5,8 @@
 #' are smoothed across three dimensions (space, time, age) using kernel weights,
 #' then added back to predictions.
 #'
-#' @param fit A fitted lme4 model from [dmft_fit()].
+#' @param fit A fitted model from [dmft_fit()] (lme4) or [dmft_fit_bayes()]
+#'   (Bayesian). Both are supported transparently.
 #' @param adjacency Adjacency object from [dmft_adjacency()].
 #' @param config A [dmft_config] object.
 #' @param dentition `"deciduous"` or `"permanent"`.
@@ -19,10 +20,12 @@
 #'   }
 #' @export
 dmft_ast <- function(fit, adjacency, config, dentition = c("deciduous", "permanent")) {
+
   dentition <- match.arg(dentition)
   stopifnot(inherits(config, "dmft_config"))
 
-  mdata <- attr(fit, "dmft_mdata")
+  is_bayes <- inherits(fit, "dmft_fit_bayes")
+  mdata <- if (is_bayes) fit$mdata else attr(fit, "dmft_mdata")
   ap <- config$ast_params
 
   age_groups <- if (dentition == "deciduous") config$age_groups_deciduous
@@ -36,7 +39,11 @@ dmft_ast <- function(fit, adjacency, config, dentition = c("deciduous", "permane
 
   # Extract residuals from observed data
   obs_data <- mdata$data
-  obs_data$residual <- stats::residuals(fit)
+  if (is_bayes) {
+    obs_data$residual <- compute_bayes_residuals(fit)
+  } else {
+    obs_data$residual <- stats::residuals(fit)
+  }
   obs_data$location <- match(obs_data$region_std, config$regions)
   obs_data$age_num  <- obs_data$age_group_idx
 
@@ -295,6 +302,12 @@ apply_ast_smoothing <- function(resid_df, space_mat, time_mat, age_mat,
 #' Predict from lme4 model for a full grid
 #' @keywords internal
 predict_lmer_grid <- function(fit, grid, config, dentition) {
+  is_bayes <- inherits(fit, "dmft_fit_bayes")
+
+  if (is_bayes) {
+    return(predict_bayes_grid(fit, grid, config))
+  }
+
   # Build new data for prediction
   newdata <- data.frame(
     region_std  = grid$region,
@@ -325,4 +338,60 @@ predict_lmer_grid <- function(fit, grid, config, dentition) {
   )
 
   as.numeric(preds)
+}
+
+
+#' Compute residuals from Bayesian fit (posterior means)
+#' @keywords internal
+compute_bayes_residuals <- function(fit_bayes) {
+  stan_fit <- fit_bayes$fit
+  mdata    <- fit_bayes$mdata
+  d        <- mdata$data
+
+  draws <- stan_fit$draws(format = "draws_df")
+  alpha_mean <- mean(draws[["alpha"]])
+  re_region_means <- colMeans(
+    as.matrix(draws[, grep("^re_region\\[", names(draws))])
+  )
+  re_year_means <- colMeans(
+    as.matrix(draws[, grep("^re_year\\[", names(draws))])
+  )
+
+  pred <- numeric(nrow(d))
+  for (i in seq_len(nrow(d))) {
+    pred[i] <- alpha_mean + re_region_means[d$province_idx[i]] +
+               re_year_means[d$year_idx[i]]
+  }
+
+  d$y - pred
+}
+
+
+#' Predict from Bayesian model for a full grid (posterior means)
+#' @keywords internal
+predict_bayes_grid <- function(fit_bayes, grid, config) {
+  stan_fit <- fit_bayes$fit
+  draws <- stan_fit$draws(format = "draws_df")
+
+  alpha_mean <- mean(draws[["alpha"]])
+  re_region_means <- colMeans(
+    as.matrix(draws[, grep("^re_region\\[", names(draws))])
+  )
+  re_year_means <- colMeans(
+    as.matrix(draws[, grep("^re_year\\[", names(draws))])
+  )
+
+  province_idx <- match(grid$region, config$regions)
+  year_idx     <- grid$year - config$year_start + 1L
+
+  pred <- numeric(nrow(grid))
+  for (i in seq_len(nrow(grid))) {
+    r_idx <- province_idx[i]
+    y_idx <- year_idx[i]
+    re_r <- if (!is.na(r_idx) && r_idx <= length(re_region_means)) re_region_means[r_idx] else 0
+    re_y <- if (!is.na(y_idx) && y_idx <= length(re_year_means)) re_year_means[y_idx] else 0
+    pred[i] <- alpha_mean + re_r + re_y
+  }
+
+  pred
 }

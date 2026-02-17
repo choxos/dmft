@@ -36,7 +36,10 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     withr,
-    merTools
+    merTools,
+    cmdstanr,
+    posterior,
+    loo
 Config/testthat/edition: 3
 Config/Needs/website: pkgdown
 URL: https://github.com/choxos/dmft

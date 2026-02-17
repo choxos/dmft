@@ -23,6 +23,10 @@
 #'     \item{weight_coverage}{Weight for high-coverage data sources (default 0.9).}
 #'   }
 #' @param n_boot Number of bootstrap replicates for uncertainty intervals.
+#' @param stan_settings Optional named list of Stan sampling settings for the
+#'   experimental Bayesian backend (see [dmft_fit_bayes()]). Elements:
+#'   `chains`, `iter_warmup`, `iter_sampling`, `adapt_delta`, `max_treedepth`.
+#'   If `NULL`, sensible defaults are used.
 #' @param seed Random seed for reproducibility.
 #' @param region_mapping Optional named list mapping alternative region names to
 #'   canonical names in `regions`.
@@ -57,6 +61,7 @@ dmft_config <- function(
       weight_coverage = 0.9
     ),
     n_boot = 1000L,
+    stan_settings = NULL,
     seed = 12345L,
     region_mapping = NULL) {
 
@@ -135,6 +140,7 @@ dmft_config <- function(
     covariates = covariates,
     ast_params = ast_params,
     n_boot = as.integer(n_boot),
+    stan_settings = stan_settings,
     seed = as.integer(seed),
 
     # Projection scenario adjustments
